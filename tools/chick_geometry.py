@@ -52,11 +52,11 @@ CTRL_V3 = np.array([
     (0.320, 0.398, 0.362, -0.030),
     (0.420, 0.406, 0.368, -0.033),
     (0.560, 0.394, 0.358, -0.030),
-    (0.720, 0.365, 0.333, -0.025),
-    (0.860, 0.325, 0.300, -0.020),
-    (0.980, 0.282, 0.265, -0.018),
-    (1.080, 0.245, 0.236, -0.022),
-    (1.160, 0.226, 0.226, -0.032),
+    (0.720, 0.376, 0.342, -0.025),
+    (0.860, 0.350, 0.320, -0.020),
+    (0.980, 0.308, 0.286, -0.018),
+    (1.080, 0.262, 0.250, -0.022),
+    (1.160, 0.230, 0.230, -0.032),
     (1.240, 0.224, 0.240, -0.045),
     (1.330, 0.214, 0.236, -0.050),
     (1.410, 0.184, 0.202, -0.046),
@@ -306,10 +306,17 @@ def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, se
     def octave(nx, ny, amp):
         g = rng.standard_normal((ny, nx))
         return amp * zoom(g, (N / ny, N / nx), order=3, mode="grid-wrap")
-    strands = octave(N, max(8, N // 12), .45) + octave(N // 2, max(4, N // 24), .35) + octave(N // 4, max(2, N // 48), .2)   # fibres along the down
+    from scipy.ndimage import map_coordinates
+    raw = octave(N, max(8, N // 7), .45) + octave(N // 2, max(4, N // 14), .35) + octave(N // 4, max(2, N // 28), .2)
+    wy = octave(32, 32, 1.0) * (N / 220.0); wx = octave(32, 32, 1.0) * (N / 170.0)
+    yy, xx = np.mgrid[0:N, 0:N].astype(float)
+    wavy = map_coordinates(raw, [yy + wy, xx + wx], order=1, mode="grid-wrap")      # gently wavy fibres
+    zgrid = prof.at(((np.arange(N) + 0.5) / N) * prof.T)[0][:, None] * np.ones((1, N))
+    headm = smoothstep((zgrid - 1.08) / 0.12)
+    strands = wavy * (1 - headm) + raw * 0.6 * headm                                 # short, smoother down on the head
     blotch = octave(8, 6, .5) + octave(24, 16, .3)
     front = (np.cos(a) + 1) / 2
-    dark = np.array([.175, .095, .052]); light = np.array([.280, .158, .088]); tip = np.array([.385, .232, .132])
+    dark = np.array([.175, .100, .043]); light = np.array([.282, .164, .070]); tip = np.array([.385, .245, .115])   # tawny ochre
     k = np.clip(0.35 + 0.45 * front - 0.15 * smoothstep((z - 1.15) / .3) + .06 * blotch, 0, 1)
     rgb = dark * (1 - k[..., None]) + light * k[..., None]
     rgb = rgb * (0.80 + 0.25 * Fn ** 0.8)[..., None]                       # gentle shading between clumps
@@ -338,7 +345,7 @@ def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, se
     hx = (np.roll(H, -1, axis=1) - np.roll(H, 1, axis=1)) / (2 * du)
     hy = (np.roll(H, -1, axis=0) - np.roll(H, 1, axis=0)) / (2 * dv)
     hy[0] = hy[1]; hy[-1] = hy[-2]
-    s = 0.6
+    s = 0.6 * (1 - 0.35 * headm)
     n = np.stack([-s * hx, -s * hy, np.ones_like(H)], -1)
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
     gl = n * 0.5 + 0.5
@@ -346,22 +353,22 @@ def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, se
     return rgb, gl, dx
 
 
-def tarsus(side, k=8, n=12):
-    """Short, thick grey leg from the foot up into the down."""
+def tarsus(side, k=16, n=12):
+    """Short, thick dark leg from the foot up into the down, with faint scale rings."""
     s = np.linspace(0, 1, k)
     C = np.stack([np.full(k, side * 0.226), 0.010 - 0.015 * s, 0.050 + 0.27 * s], 1)
-    r = 0.050 + 0.016 * s
+    r = (0.050 + 0.016 * s) * (1 + 0.035 * np.cos(np.pi * 9 * s) ** 2)
     return loft(C, r, r * 1.05, n, cap_start=True)
 
 
 def flipper_centres_v3(prof: Profile, side, k=10):
     """Longer flipper that hangs close along the side, covered in the same down."""
-    zs = np.linspace(0.985, 0.32, k)
+    zs = np.linspace(0.985, 0.26, k)
     ts = prof.t_at_z(zs)
     z, rx, ry, cy = prof.at(ts)
-    off = 0.010 + 0.028 * ((0.985 - zs) / 0.665) ** 1.6
+    off = 0.010 + 0.028 * ((0.985 - zs) / 0.725) ** 1.6
     x = side * (rx + off)
-    y = cy + 0.030 + 0.030 * (0.985 - zs) / 0.665
+    y = cy + 0.030 + 0.030 * (0.985 - zs) / 0.725
     widths = np.array([.034, .062, .078, .084, .084, .080, .072, .058, .036, .006])
     return np.stack([x, y, zs], 1), widths
 

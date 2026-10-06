@@ -41,7 +41,7 @@ def fluffy(m):
 navy=fluffy(mat('M_Chick_DownDark',(0.024,0.011,0.004),.85))      # flippers, tail
 charcoal=mat('M_Chick_Bill',(0.022,0.019,0.021),.32)            # glossy near-black upper bill
 billlow=mat('M_Chick_BillLower',(0.05,0.043,0.043),.38)
-orange=mat('M_Chick_Foot',(0.052,0.050,0.053),.70) if 'surface' in V3 else mat('M_Chick_Foot',(0.04,0.034,0.034),.65)   # feet, legs, eyelids
+orange=mat('M_Chick_Foot',(0.030,0.028,0.030),.62) if 'surface' in V3 else mat('M_Chick_Foot',(0.04,0.034,0.034),.65)   # feet, legs, eyelids
 sole=mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
 cream=mat('M_Chick_Iris',(0.030,0.016,0.009),.12)               # dark brown-black glossy eye                   # small dark eye
 black=mat('M_Chick_Pupil',(0.009,0.008,0.01),.19)
@@ -115,11 +115,11 @@ def body_w(p):
     h=smooth((p.z-.96)/.23); b=smooth((p.z-.38)/.38)
     return {'pelvis':(1-b)*(1-h),'body':b*(1-h),'head':h}
 # Pear-shaped body, neck and head as one continuous surface, displaced by real down tufts.
-verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.62 if 'surface' in V3 else 1.0)
+verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.80 if 'surface' in V3 else 1.0)
 print('BODY',info,flush=True)
 body=mesh('Body • continuous head and torso, tufted down',verts,faces,skin,body_w,0,uvs)
 
-def leaf(name,centers,widths,thickness,m,fn,sub=1,flat_x=False,disp=0):
+def leaf(name,centers,widths,thickness,m,fn,sub=1,flat_x=False,disp=0,uv_u0=None):
     vs=[]; fs=[]; n=12
     for c,w in zip(centers,widths):
         for j in range(n):
@@ -128,7 +128,17 @@ def leaf(name,centers,widths,thickness,m,fn,sub=1,flat_x=False,disp=0):
     for i in range(len(centers)-1):
         for j in range(n): fs.append((i*n+j,i*n+(j+1)%n,(i+1)*n+(j+1)%n,(i+1)*n+j))
     fs.extend([tuple(reversed(range(n))),tuple((len(centers)-1)*n+j for j in range(n))])
-    return mesh(name,vs,fs,m,fn,sub,disp=disp)
+    uvs=None
+    if uv_u0 is not None:
+        # u folds around the section (no seam), v follows the part's height on the body texture,
+        # so the down's fibres run along the flipper instead of across it
+        uu=lambda j: uv_u0+0.05*(1-abs(2*(j%n)/n-1))
+        vv=[float(PROF.t_at_z(min(max(c[2],0.2),1.45))/PROF.T) for c in centers]
+        uvs=[]
+        for i in range(len(centers)-1):
+            for j in range(n): uvs.append([(uu(j),vv[i]),(uu(j+1),vv[i]),(uu(j+1),vv[i+1]),(uu(j),vv[i+1])])
+        uvs.append([(uv_u0+0.025,vv[0])]*n); uvs.append([(uv_u0+0.025,vv[-1])]*n)
+    return mesh(name,vs,fs,m,fn,sub,uvs=uvs,disp=disp)
 
 def torus(name,center,normal,major,minor,m,bone):
     bpy.ops.mesh.primitive_torus_add(major_radius=major*100,minor_radius=minor*100,major_segments=28,minor_segments=8,
@@ -142,7 +152,8 @@ for s,label in [(1,'L'),(-1,'R')]:
     centers,widths=(G.flipper_centres_v3 if 'shape' in V3 else G.flipper_centres)(PROF,s)
     def fw(p,L=label):
         t=smooth((.87-p.z)/.24); return {'flipper.'+L:1-t,'flipper_tip.'+L:t}
-    leaf('Flipper.'+label,[tuple(c) for c in centers],widths,.40 if 'shape' in V3 else .30,skin,fw,1,flat_x=True,disp=1.5 if 'shape' in V3 else 1.2)   # same down material as the body
+    leaf('Flipper.'+label,[tuple(c) for c in centers],widths,.40 if 'shape' in V3 else .30,skin,fw,1,flat_x=True,disp=1.5 if 'shape' in V3 else 1.2,
+         uv_u0=(0.72 if s>0 else 0.23) if 'surface' in V3 else None)   # same down material as the body
     # Feet: three splayed toes with knuckles, hooked claws and scalloped webbing.
     def footw(p,L=label):
         t=.7*smooth((-.10-p.y)/.18); return {'foot.'+L:1-t,'toe.'+L:t}
@@ -174,7 +185,7 @@ mesh('Bill upper',uv_,uf_,charcoal,rigid('head'),1)
 mesh('Bill lower',lv_,lf_,billlow,rigid('head'),1)
 
 # No crest on a chick; the 'crest' bone is kept so the skeleton matches Pebble's clips.
-leaf('Tail tuft',[(0,.36,.30),(0,.40,.32),(0,.44,.35)],[.07,.06,.002],.5,skin,rigid('tail'),1,disp=.6)
+leaf('Tail tuft',[(0,.36,.30),(0,.40,.32),(0,.44,.35)],[.07,.06,.002],.5,skin,rigid('tail'),1,disp=.6,uv_u0=0.03 if 'surface' in V3 else None)
 
 # Correct face winding/normals and consolidate to one skinned mesh.
 bpy.ops.object.select_all(action='DESELECT')
