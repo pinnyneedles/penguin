@@ -38,3 +38,32 @@ python3 tools/make_penguin.py
 
 Every part is an ellipsoid or cone placed in centimetres inside `build_parts()`. Changing a radius,
 position or colour in that function and rerunning the script rebuilds the GLB, the OBJ and the preview.
+
+## Pebble (rigged character) and the waddle cycle
+
+`pebble/Pebble_Penguin/` holds the Pebble character package (Blender source, `SK_Pebble.fbx` skeletal
+mesh, Idle and Jump clips, texture and validation reports; see its `README_Unreal.txt` for import steps).
+
+Added on top of the package:
+
+| File | What it is |
+|---|---|
+| `pebble/Pebble_Penguin/AN_Pebble_Waddle.fbx` | 33-frame looping waddle at 30 fps, root stationary (in place). Same mesh and skeleton as the other clips. |
+| `pebble/Pebble_Penguin/Pebble_Waddle.gif` | Rendered preview of the loop. |
+| `pebble/Pebble_Penguin/Preview_Waddle.png` | Four key poses of the cycle. |
+| `pebble/Pebble_Penguin/Pebble_Waddle.blend` | The source scene with the `Pebble_Waddle` action added. |
+| `tools/make_pebble_waddle.py` | Script that authors the cycle, exports the FBX and renders the preview. |
+
+![waddle](pebble/Pebble_Penguin/Preview_Waddle.png)
+
+Import `AN_Pebble_Waddle.fbx` exactly like the Idle clip (Import Mesh off, Import Animations on, Pebble
+skeleton selected, 30 fps). Frame 33 repeats frame 1, so enable looping on the Animation Sequence. The clip
+has no root motion; drive forward speed from Character Movement. Each stride covers about 16 cm, so a
+walk speed near 30 cm/s matches the feet; faster than that will show some foot slide.
+
+To tweak the cycle (sway, lift, stride, flipper swing) edit the constants at the top of the script and rerun:
+
+```
+pip install bpy pillow
+python3 tools/make_pebble_waddle.py --package pebble/Pebble_Penguin --out pebble/Pebble_Penguin
+```

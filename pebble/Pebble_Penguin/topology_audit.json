@@ -1,0 +1,7 @@
+{
+  "nonmanifold_edges": 0,
+  "loose_vertices": 0,
+  "zero_area_faces": 0,
+  "connected_surface_islands": 26,
+  "note": "One skinned object contains intersecting closed surface pieces for eyes, bill, feathers and limbs. These are intentionally not welded to the continuous torso/head."
+}

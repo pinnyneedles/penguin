@@ -1,0 +1,322 @@
+{
+  "source_bone_hierarchy": {
+    "root": null,
+    "pelvis": "root",
+    "body": "pelvis",
+    "head": "body",
+    "crest": "head",
+    "flipper.L": "body",
+    "flipper_tip.L": "flipper.L",
+    "flipper.R": "body",
+    "flipper_tip.R": "flipper.R",
+    "tail": "pelvis",
+    "leg.L": "pelvis",
+    "foot.L": "leg.L",
+    "toe.L": "foot.L",
+    "leg.R": "pelvis",
+    "foot.R": "leg.R",
+    "toe.R": "foot.R"
+  },
+  "unreal_import_tested": false,
+  "tests": [
+    {
+      "file": "SK_Pebble.fbx",
+      "mesh_count": 1,
+      "armature_count": 1,
+      "vertices": 17892,
+      "triangles": 35680,
+      "bones": 16,
+      "hierarchy_matches": true,
+      "uv_layers": 1,
+      "material_slots": 8,
+      "action_count": 0,
+      "samples": [
+        {
+          "frame": 1,
+          "max_surface_distance_cm": 4.059561979374848e-05,
+          "bounds_cm": [
+            [
+              -65.33123779296875,
+              65.33123779296875
+            ],
+            [
+              -52.39999771118164,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.0937957763672
+            ]
+          ],
+          "finite": true
+        }
+      ],
+      "blender_import_inferred_connections_cleared": [
+        "pelvis",
+        "crest",
+        "foot.L",
+        "toe.L",
+        "foot.R",
+        "toe.R"
+      ],
+      "animation_import_offset": 0,
+      "bad_weight_vertices": 0,
+      "max_influences": 2,
+      "pass": true,
+      "fbx_version": 7400,
+      "fbx_axis_and_units": {
+        "UpAxis": 2,
+        "UpAxisSign": 1,
+        "FrontAxis": 0,
+        "FrontAxisSign": -1,
+        "CoordAxis": 1,
+        "CoordAxisSign": -1,
+        "UnitScaleFactor": 0.9999999776482582
+      }
+    },
+    {
+      "file": "AN_Pebble_Jump.fbx",
+      "mesh_count": 1,
+      "armature_count": 1,
+      "vertices": 17892,
+      "triangles": 35680,
+      "bones": 16,
+      "hierarchy_matches": true,
+      "uv_layers": 1,
+      "material_slots": 8,
+      "action_count": 1,
+      "samples": [
+        {
+          "frame": 1,
+          "max_surface_distance_cm": 4.059561979374848e-05,
+          "bounds_cm": [
+            [
+              -65.33123779296875,
+              65.33123779296875
+            ],
+            [
+              -52.39999771118164,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.0937957763672
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 9,
+          "max_surface_distance_cm": 4.3588235712377355e-05,
+          "bounds_cm": [
+            [
+              -72.08903503417969,
+              72.08903503417969
+            ],
+            [
+              -56.393333435058594,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              159.8939666748047
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 18,
+          "max_surface_distance_cm": 6.919234147062525e-05,
+          "bounds_cm": [
+            [
+              -78.52781677246094,
+              78.5278091430664
+            ],
+            [
+              -51.60722351074219,
+              48.002296447753906
+            ],
+            [
+              22.95606231689453,
+              198.45631408691406
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 27,
+          "max_surface_distance_cm": 5.583679740084335e-05,
+          "bounds_cm": [
+            [
+              -76.17398071289062,
+              76.17396545410156
+            ],
+            [
+              -52.40000915527344,
+              48.00229263305664
+            ],
+            [
+              39.38228225708008,
+              207.0937957763672
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 38,
+          "max_surface_distance_cm": 5.722840433008969e-05,
+          "bounds_cm": [
+            [
+              -70.95220184326172,
+              70.95218658447266
+            ],
+            [
+              -56.18818664550781,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              163.02272033691406
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 48,
+          "max_surface_distance_cm": 4.059561979374848e-05,
+          "bounds_cm": [
+            [
+              -65.33123779296875,
+              65.33123779296875
+            ],
+            [
+              -52.39999771118164,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.0937957763672
+            ]
+          ],
+          "finite": true
+        }
+      ],
+      "blender_import_inferred_connections_cleared": [
+        "pelvis",
+        "crest",
+        "foot.L",
+        "toe.L",
+        "foot.R",
+        "toe.R"
+      ],
+      "animation_import_offset": 0,
+      "bad_weight_vertices": 0,
+      "max_influences": 2,
+      "pass": true,
+      "fbx_version": 7400,
+      "fbx_axis_and_units": {
+        "UpAxis": 2,
+        "UpAxisSign": 1,
+        "FrontAxis": 0,
+        "FrontAxisSign": -1,
+        "CoordAxis": 1,
+        "CoordAxisSign": -1,
+        "UnitScaleFactor": 0.9999999776482582
+      }
+    },
+    {
+      "file": "AN_Pebble_Idle.fbx",
+      "mesh_count": 1,
+      "armature_count": 1,
+      "vertices": 17892,
+      "triangles": 35680,
+      "bones": 16,
+      "hierarchy_matches": true,
+      "uv_layers": 1,
+      "material_slots": 8,
+      "action_count": 1,
+      "samples": [
+        {
+          "frame": 1,
+          "max_surface_distance_cm": 4.059561979374848e-05,
+          "bounds_cm": [
+            [
+              -65.33123779296875,
+              65.33123779296875
+            ],
+            [
+              -52.39999771118164,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.0937957763672
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 16,
+          "max_surface_distance_cm": 5.300404882291332e-05,
+          "bounds_cm": [
+            [
+              -65.37852478027344,
+              65.37852478027344
+            ],
+            [
+              -53.14613342285156,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.04014587402344
+            ]
+          ],
+          "finite": true
+        },
+        {
+          "frame": 31,
+          "max_surface_distance_cm": 4.059561979374848e-05,
+          "bounds_cm": [
+            [
+              -65.33123779296875,
+              65.33123779296875
+            ],
+            [
+              -52.39999771118164,
+              48.00230026245117
+            ],
+            [
+              1.826606035232544,
+              169.0937957763672
+            ]
+          ],
+          "finite": true
+        }
+      ],
+      "blender_import_inferred_connections_cleared": [
+        "pelvis",
+        "crest",
+        "foot.L",
+        "toe.L",
+        "foot.R",
+        "toe.R"
+      ],
+      "animation_import_offset": 0,
+      "bad_weight_vertices": 0,
+      "max_influences": 2,
+      "pass": true,
+      "fbx_version": 7400,
+      "fbx_axis_and_units": {
+        "UpAxis": 2,
+        "UpAxisSign": 1,
+        "FrontAxis": 0,
+        "FrontAxisSign": -1,
+        "CoordAxis": 1,
+        "CoordAxisSign": -1,
+        "UnitScaleFactor": 0.9999999776482582
+      }
+    }
+  ],
+  "all_pass": true
+}
