@@ -79,7 +79,7 @@ Chick_BellySlide_End                28    0.93 s  no    flippers push up, legs s
 Suggested state machine: Locomotion (1D Blend Space on speed: Idle at 0, Waddle at 23.25 cm/s)
 -> Jump_Start -> Jump_Loop while airborne -> Jump_Land -> Locomotion.
 Locomotion -> BellySlide_Start -> BellySlide_Loop while sliding -> BellySlide_End -> Locomotion.
-The lying body is centred over the root, about 174 cm wide (flipper to flipper), 179 cm long
+The lying body is centred over the root, about 160 cm wide (flipper to flipper), 179 cm long
 (bill to trailing feet) and 114 cm tall (raised head). While sliding, a smaller collision shape
 (for example a capsule of half-height about 57 cm and radius about 55 cm) fits it better than
 the standing capsule.

@@ -367,7 +367,7 @@ def jump_land_params(loop0):
 
 
 LIE = dict(mode="belly", ik_w=0.0, pel_pitch=1.70, body_pitch=-0.62, head_pitch=-0.75,
-           flip_out=0.60, flip_swing=0.10, flip_tip=0.10, leg_pitch=0.30, foot_pitch=1.60,
+           flip_out=0.42, flip_swing=0.40, flip_tip=0.10, leg_pitch=0.30, foot_pitch=1.60,
            toe_pitch=0.20, tail_pitch=-0.20)
 FOOT_LIE_PITCH = 2.55        # toes point back, soles up, claws on the ice
 
@@ -406,7 +406,7 @@ def slide_loop_params(lie_off, ankles, n=33):
             a = ankles[L]
             p["ankle_" + L] = (a[0], a[1] + 5.0 * k, a[2] + 4.5 * max(0.0, k) ** 1.5)
             p["ik_foot_pitch_" + L] = FOOT_LIE_PITCH - 0.25 * k
-        p.update(flip_out=0.60 + 0.12 * math.sin(2 * ph), flip_swing=0.10 + 0.10 * math.sin(2 * ph - 0.9),
+        p.update(flip_out=0.42 + 0.10 * math.sin(2 * ph), flip_swing=0.40 + 0.10 * math.sin(2 * ph - 0.9),
                  flip_tip=0.10 + 0.10 * math.sin(2 * ph - 1.4),
                  pel_roll=0.05 * math.sin(ph), head_pitch=-0.75 + 0.03 * math.sin(2 * ph),
                  tail_yaw=0.20 * math.sin(2 * ph))
@@ -427,10 +427,10 @@ def slide_start_params(R, loop0, lie_off):
             (10, dict(ik_w=1.0, pel_off=(0, -8, -3), pel_pitch=0.75, body_pitch=0.05, head_pitch=-0.35, flip_swing=0.55, flip_out=0.30)),
             (13, dict(ik_w=0.0, pel_off=tuple(Vector((0, -8, -3)).lerp(lo, 0.55)), pel_pitch=1.20, body_pitch=-0.30,
                       head_pitch=-0.55, flip_out=0.45, flip_swing=0.30, leg_pitch=0.35, foot_pitch=1.0)),
-            (15, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.55, body_pitch=-0.45, head_pitch=-0.62, flip_out=0.55,
+            (15, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.55, body_pitch=-0.45, head_pitch=-0.62, flip_out=0.45,
                       leg_pitch=0.30, foot_pitch=1.6, **{k: v for k, v in lie.items() if k.startswith(("ankle_", "ik_foot_pitch_"))})),
             (17, dict(lie, body_pitch=-0.45, head_pitch=-0.62)),            # belly contact, head stays up
-            (20, dict(lie, body_pitch=-0.60, head_pitch=-0.80, flip_out=0.68)),
+            (20, dict(lie, body_pitch=-0.60, head_pitch=-0.80, flip_out=0.50)),
             (24, lie)]
     fr = keyed(keys, 24, dflt)
     for f in fr:
