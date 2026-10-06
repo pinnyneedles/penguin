@@ -186,3 +186,12 @@ python3 tools/verify_chick_anims.py pebble/Pebble_Chick
 python3 tools/render_chick_slide_travel.py pebble/Pebble_Chick
 python3 tools/render_chick_lookdev.py pebble/Pebble_Chick/Pebble_Chick.blend <out_dir>   # review views
 ```
+
+## Level kit (props)
+
+`props/` holds a first pass of level pieces for penguin levels, sized on a 100 cm grid with collision built
+in. It includes ice blocks, a snow-capped block, snow and ice ramps, five slide-chute track pieces that snap
+together through sockets, ice floes, snow mounds, rocks, an icicle cluster and a fish collectible. See
+[`props/README.md`](props/README.md) for the full list, the conventions and how to rebuild.
+
+![kit vignette](props/Kit/Previews/Kit_Vignette.png)

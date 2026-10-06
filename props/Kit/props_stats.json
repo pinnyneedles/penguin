@@ -1,0 +1,364 @@
+{
+  "SM_IceBlock_200": {
+    "size_cm": [
+      200,
+      200,
+      200
+    ],
+    "pivot": "bottom centre",
+    "triangles": 296,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice"
+    ]
+  },
+  "SM_IceBlock_100": {
+    "size_cm": [
+      100,
+      100,
+      100
+    ],
+    "pivot": "bottom centre",
+    "triangles": 260,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice"
+    ]
+  },
+  "SM_IceSlab_200x200x50": {
+    "size_cm": [
+      200,
+      200,
+      50
+    ],
+    "pivot": "bottom centre",
+    "triangles": 236,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice"
+    ]
+  },
+  "SM_IceBlock_200_SnowCap": {
+    "size_cm": [
+      200,
+      200,
+      227
+    ],
+    "pivot": "bottom centre",
+    "triangles": 1812,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_Ramp_Snow_400x200x100": {
+    "size_cm": [
+      400,
+      200,
+      100
+    ],
+    "slope_deg": 13.6,
+    "pivot": "bottom centre",
+    "triangles": 36,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Snow"
+    ]
+  },
+  "SM_Ramp_Ice_400x200x200": {
+    "size_cm": [
+      400,
+      200,
+      200
+    ],
+    "slope_deg": 26.2,
+    "pivot": "bottom centre",
+    "triangles": 36,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice"
+    ]
+  },
+  "SM_SlideChute_Straight_400": {
+    "kind": "straight",
+    "exit_offset_cm": [
+      400.0,
+      0.0,
+      0.0
+    ],
+    "exit_direction": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "inner_width_cm": 200.0,
+    "wall_height_cm": 50.0,
+    "pivot": "centre of the entrance floor",
+    "triangles": 216,
+    "collision_hulls": 12,
+    "sockets": [
+      "SOCKET_Start",
+      "SOCKET_End"
+    ],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_SlideChute_CurveLeft_90": {
+    "kind": "90 degree left turn, centre-line radius 400",
+    "exit_offset_cm": [
+      400.0,
+      400.0,
+      0.0
+    ],
+    "exit_direction": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "inner_width_cm": 200.0,
+    "wall_height_cm": 50.0,
+    "pivot": "centre of the entrance floor",
+    "triangles": 744,
+    "collision_hulls": 48,
+    "sockets": [
+      "SOCKET_Start",
+      "SOCKET_End"
+    ],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_SlideChute_CurveRight_90": {
+    "kind": "90 degree right turn, centre-line radius 400",
+    "exit_offset_cm": [
+      400.0,
+      -400.0,
+      0.0
+    ],
+    "exit_direction": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "inner_width_cm": 200.0,
+    "wall_height_cm": 50.0,
+    "pivot": "centre of the entrance floor",
+    "triangles": 744,
+    "collision_hulls": 48,
+    "sockets": [
+      "SOCKET_Start",
+      "SOCKET_End"
+    ],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_SlideChute_Slope_400x100": {
+    "kind": "drops 100 over 400, level at both ends",
+    "exit_offset_cm": [
+      400.0,
+      0.0,
+      -100.0
+    ],
+    "exit_direction": [
+      1.0,
+      0.0,
+      -0.0
+    ],
+    "inner_width_cm": 200.0,
+    "wall_height_cm": 50.0,
+    "pivot": "centre of the entrance floor",
+    "triangles": 568,
+    "collision_hulls": 36,
+    "sockets": [
+      "SOCKET_Start",
+      "SOCKET_End"
+    ],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_SlideChute_Kicker_400": {
+    "kind": "jump lip, exits 25 degrees up",
+    "exit_offset_cm": [
+      400.0,
+      0.0,
+      29.9
+    ],
+    "exit_direction": [
+      0.906,
+      0.0,
+      0.423
+    ],
+    "inner_width_cm": 200.0,
+    "wall_height_cm": 50.0,
+    "pivot": "centre of the entrance floor",
+    "triangles": 568,
+    "collision_hulls": 36,
+    "sockets": [
+      "SOCKET_Start",
+      "SOCKET_End"
+    ],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_IceFloe_A": {
+    "size_cm": [
+      339,
+      314,
+      54.0
+    ],
+    "pivot": "bottom centre (float it so about a third is under water)",
+    "triangles": 466,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_IceFloe_B": {
+    "size_cm": [
+      525,
+      513,
+      54.0
+    ],
+    "pivot": "bottom centre (float it so about a third is under water)",
+    "triangles": 466,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_IceFloe_C": {
+    "size_cm": [
+      689,
+      663,
+      54.0
+    ],
+    "pivot": "bottom centre (float it so about a third is under water)",
+    "triangles": 570,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Ice",
+      "M_Snow"
+    ]
+  },
+  "SM_SnowMound_A": {
+    "size_cm": [
+      240,
+      204,
+      45
+    ],
+    "pivot": "bottom centre",
+    "triangles": 798,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Snow"
+    ]
+  },
+  "SM_SnowMound_B": {
+    "size_cm": [
+      400,
+      340,
+      80
+    ],
+    "pivot": "bottom centre",
+    "triangles": 798,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Snow"
+    ]
+  },
+  "SM_Rock_A": {
+    "size_cm": [
+      86,
+      68,
+      29
+    ],
+    "pivot": "bottom centre",
+    "triangles": 1280,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Rock"
+    ]
+  },
+  "SM_Rock_B": {
+    "size_cm": [
+      154,
+      117,
+      57
+    ],
+    "pivot": "bottom centre",
+    "triangles": 1280,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Rock"
+    ]
+  },
+  "SM_Rock_C": {
+    "size_cm": [
+      245,
+      207,
+      87
+    ],
+    "pivot": "bottom centre",
+    "triangles": 1280,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Rock"
+    ]
+  },
+  "SM_Icicles_Cluster": {
+    "size_cm": [
+      142,
+      64,
+      108
+    ],
+    "pivot": "top centre (hangs down)",
+    "note": "use the collision as a damage trigger if icicles are a hazard",
+    "triangles": 1108,
+    "collision_hulls": 8,
+    "sockets": [],
+    "materials": [
+      "M_Ice"
+    ]
+  },
+  "SM_Fish_Collectible": {
+    "size_cm": [
+      41,
+      11,
+      22
+    ],
+    "pivot": "centre",
+    "triangles": 512,
+    "collision_hulls": 1,
+    "sockets": [],
+    "materials": [
+      "M_Fish",
+      "M_FishEye"
+    ]
+  }
+}
