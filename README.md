@@ -58,8 +58,9 @@ Added on top of the package:
 
 Import `AN_Pebble_Waddle.fbx` exactly like the Idle clip (Import Mesh off, Import Animations on, Pebble
 skeleton selected, 30 fps). Frame 33 repeats frame 1, so enable looping on the Animation Sequence. The clip
-has no root motion; drive forward speed from Character Movement. Each stride covers about 16 cm, so a
-walk speed near 30 cm/s matches the feet; faster than that will show some foot slide.
+has no root motion; drive forward speed from Character Movement. Planted feet travel about 12.4 cm per
+step (one two-step cycle every 1.07 s), so a walk speed near 23 cm/s matches the feet. Faster than that
+shows foot slide unless you scale the play rate.
 
 To tweak the cycle (sway, lift, stride, flipper swing) edit the constants at the top of the script and rerun:
 
@@ -100,7 +101,8 @@ modelled from a reference photo of a real chick:
 | `tools/build_pebble_chick.py` | Builds the Blender scene, rig, clips, exports and previews using `chick_geometry.py`. Pass `--no-previews` to skip the renders. |
 | `tools/render_chick_closeups.py` | Renders fixed close-ups of the eye, bill and feet from a built `.blend`, for comparing versions. |
 
-Import exactly as described for Pebble in `pebble/Pebble_Penguin/README_Unreal.txt`. Import the skeletal mesh
+Full Unreal import notes for the chick, including materials, animation details and how to add hair strands,
+are in `pebble/Pebble_Chick/README_Unreal.txt`. In short, import the skeletal mesh
 first with no skeleton assigned. Then import each animation FBX with Import Mesh off and the new skeleton
 selected. Bone names match Pebble's, so you can also import the chick mesh onto Pebble's skeleton asset and
 share one Animation Blueprint. At 46k triangles it is fine for a hero character, but generate LODs in the
