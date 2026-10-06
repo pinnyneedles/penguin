@@ -67,3 +67,34 @@ To tweak the cycle (sway, lift, stride, flipper swing) edit the constants at the
 pip install bpy pillow
 python3 tools/make_pebble_waddle.py --package pebble/Pebble_Penguin --out pebble/Pebble_Penguin
 ```
+
+## Pebble Chick (brown king-penguin-chick variant)
+
+`pebble/Pebble_Chick/` is a restyle of Pebble as a fluffy brown king penguin chick: chocolate down with
+streaks, a lighter chest and darker back, bare grey skin at the bill base, a long slender dark bill, small
+dark eyes, dark feet, no crest, and a wider, lower body with a smaller head. It uses the **same 16-bone
+skeleton** as Pebble, so clips are interchangeable between the two characters.
+
+![chick](pebble/Pebble_Chick/Preview_Hero.png)
+
+| File | What it is |
+|---|---|
+| `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, 28,384 triangles, 9 material slots, texture embedded. |
+| `AN_Pebble_Chick_Idle.fbx`, `AN_Pebble_Chick_Jump.fbx`, `AN_Pebble_Chick_Waddle.fbx` | Idle (31 f), jump test (48 f) and waddle loop (33 f) at 30 fps, in place. |
+| `T_Chick_Body_BaseColor.png` | 1024-square base colour for the body (sRGB). Other slots are flat colours. |
+| `Pebble_Chick.blend`, `Pebble_Chick_Waddle.blend` | Editable scenes, the second one with the waddle action added. |
+| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. |
+| `tools/build_pebble_chick.py` | Generates the whole variant; derived from the package's `build_pebble.py`. |
+
+Import exactly as described for Pebble in `pebble/Pebble_Penguin/README_Unreal.txt`: the skeletal mesh first
+with no skeleton assigned, then each animation FBX with Import Mesh off and the new skeleton selected.
+Because bone names match Pebble's, you can also import the chick mesh onto Pebble's skeleton asset and
+share one Animation Blueprint between both characters.
+
+Rebuild or tweak (colours, bill, eye size and body profile are all near the top of the script):
+
+```
+pip install bpy numpy scipy pillow
+python3 tools/build_pebble_chick.py --out pebble/Pebble_Chick
+python3 tools/make_pebble_waddle.py --package pebble/Pebble_Chick --blend Pebble_Chick.blend --prefix Pebble_Chick --out pebble/Pebble_Chick
+```

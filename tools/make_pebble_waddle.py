@@ -51,6 +51,8 @@ def parse():
     ap = argparse.ArgumentParser()
     ap.add_argument("--package", required=True, help="folder with Pebble_Penguin.blend / SK_Pebble.fbx")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--blend", default="Pebble_Penguin.blend", help="source .blend inside --package")
+    ap.add_argument("--prefix", default="Pebble", help="name prefix for the outputs, e.g. Pebble_Chick")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--size", type=int, default=480)
     ap.add_argument("--samples", type=int, default=16)
@@ -60,12 +62,12 @@ def parse():
 # --------------------------------------------------------------------------
 # Scene loading
 # --------------------------------------------------------------------------
-def load_scene(package):
-    blend = os.path.join(package, "Pebble_Penguin.blend")
+def load_scene(package, blend_name="Pebble_Penguin.blend"):
+    blend = os.path.join(package, blend_name)
     try:
         bpy.ops.wm.open_mainfile(filepath=blend)
-        rig = bpy.data.objects["Pebble_Rig"]
-        char = bpy.data.objects["SK_Pebble"]
+        rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+        char = next(o for o in bpy.data.objects if o.type == "MESH" and o.parent == rig)
         print("opened", blend)
         return rig, char, True
     except Exception as e:  # version mismatch etc. -> rebuild from the FBX
@@ -301,19 +303,20 @@ def assemble_gif(paths, gif_path, sheet_path):
 def main():
     a = parse()
     os.makedirs(a.out, exist_ok=True)
-    rig, char, from_blend = load_scene(a.package)
+    rig, char, from_blend = load_scene(a.package, a.blend)
+    px = a.prefix
     sc = bpy.context.scene
     build_waddle(rig)
     sc.frame_start, sc.frame_end = 1, CYCLE + 1
-    export_fbx(rig, char, os.path.join(a.out, "AN_Pebble_Waddle.fbx"))
-    print("exported AN_Pebble_Waddle.fbx")
+    export_fbx(rig, char, os.path.join(a.out, f"AN_{px}_Waddle.fbx"))
+    print(f"exported AN_{px}_Waddle.fbx")
     if from_blend:
-        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(a.out, "Pebble_Waddle.blend"), copy=True)
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(a.out, f"{px}_Waddle.blend"), copy=True)
     if not a.no_render:
         ensure_render_setup(sc, from_blend)
         paths = render_frames(a.out, a.size, a.samples)
-        assemble_gif(paths, os.path.join(a.out, "Pebble_Waddle.gif"), os.path.join(a.out, "Preview_Waddle.png"))
-        print("wrote Pebble_Waddle.gif and Preview_Waddle.png")
+        assemble_gif(paths, os.path.join(a.out, f"{px}_Waddle.gif"), os.path.join(a.out, "Preview_Waddle.png"))
+        print(f"wrote {px}_Waddle.gif and Preview_Waddle.png")
 
 
 if __name__ == "__main__":
