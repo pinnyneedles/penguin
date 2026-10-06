@@ -71,22 +71,22 @@ python3 tools/make_pebble_waddle.py --package pebble/Pebble_Penguin --out pebble
 
 ## Pebble Chick (brown king-penguin-chick variant)
 
-`pebble/Pebble_Chick/` is a king penguin chick built on Pebble's skeleton. It has its own geometry,
-modelled from a reference photo of a real chick:
+`pebble/Pebble_Chick/` is a king penguin chick built on Pebble's skeleton. Its geometry was modelled from
+reference photos of real chicks and refined over three iterations:
 
-- **Pear-shaped body.** The body is lowest and widest at the belly, with a forward belly bulge, a visible neck and a smaller, slightly elongated head.
-- **Real down in the mesh.** About 840 overlapping teardrop tufts hang downward and are displaced into the surface. They are long and shaggy at the hem, full on the body and short on the head, and the skin is nearly bare around the bill and eyes. The base-colour texture is generated from the same tuft field, so the dark creases and lighter tuft tips line up with the geometry.
+- **Body shape.** A tall, straight-sided column, heaviest low down, with broad shoulders that flow into a small head without a neck pinch.
+- **Down.** About 730 soft down clumps are displaced into the surface. A normal map adds fine, gently wavy fibres, and the head has shorter, smoother down. The colour is an even tawny cinnamon with lighter fibre tips, matched to the photos.
+- **Legs and feet.** The down stops above short, dark legs with faint scale rings, so the legs show above the three-toed, clawed feet.
 - **Bill.** The bill is glossy near-black, tapered and slightly decurved. The upper mandible has a ridge and a tip that hooks just past the lower one.
 - **Eyes.** The small eyes are dark brown-black and glossy, set into the head under a thin, low ring of bare skin.
-- **Feet.** Each foot has three thick, knuckled toes with hooked claws and webbing almost to the tips.
-- **Flippers.** The flippers hang flat against the sides and use the same down material as the body.
+- **Flippers.** Long flippers hang close along the sides, covered in the same down, with the fibres running along their length.
 
 ![chick](pebble/Pebble_Chick/Preview_Sheet.png)
 
 | | |
 |---|---|
-| Triangles | 47,908 |
-| Material slots | 8 (body down uses a 1024-square texture, the rest are flat colours) |
+| Triangles | 49,124 |
+| Material slots | 8 (the body down uses a 1024-square colour texture and normal map, the rest are flat colours) |
 | Skeleton | Pebble's 16 bones, identical names, max 2 influences, weights normalized |
 | Height | about 152 cm, matching Pebble's scale |
 
@@ -95,6 +95,7 @@ modelled from a reference photo of a real chick:
 | `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, texture embedded. |
 | `AN_Pebble_Chick_*.fbx` | Eleven clips at 30 fps, skeleton only: Idle, Waddle, Waddle_RootMotion, Jump_Start, Jump_Loop, Jump_Land, BellySlide_Start, BellySlide_Loop, BellySlide_Loop_LeanLeft, BellySlide_Loop_LeanRight, BellySlide_End. See the animation table below. |
 | `T_Chick_Body_BaseColor.png` | Base colour for the down (sRGB). |
+| `T_Chick_Body_Normal_DX.png`, `T_Chick_Body_Normal_GL.png` | Fine-down normal map for Unreal (DirectX) and Blender (OpenGL). |
 | `Pebble_Chick.blend`, `Pebble_Chick_Anims.blend` | Editable scenes. The second one holds all eleven clips as actions. |
 | `Preview_*.png`, `Pebble_Chick_*.gif` | Renders. `Preview_Animations.png` shows a key pose from each clip. The GIFs show Idle, Waddle, the jump chain and the belly-slide chain. `Pebble_Chick_BellySlide_Travel.gif` shows the slide moving over snow, and `Preview_SlideLean.png` shows the steering leans. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
 | `tools/chick_geometry.py` | All chick shapes: profile, tuft field, texture, bill, feet, flippers. Pure numpy. |
@@ -107,9 +108,9 @@ modelled from a reference photo of a real chick:
 Full Unreal import notes for the chick, including materials, animation details and how to add hair strands,
 are in `pebble/Pebble_Chick/README_Unreal.txt`. In short, import the skeletal mesh
 first with no skeleton assigned. Then import each animation FBX with Import Mesh off and the new skeleton
-selected. The chick's FBX files name the armature object "Armature", so Unreal does not add an extra bone above
+selected. Use `T_Chick_Body_Normal_DX.png` as the body material's normal map. The chick's FBX files name the armature object "Armature", so Unreal does not add an extra bone above
 `root` and root motion works. The blue Pebble's package files still use the old name, so they cannot share the
-chick's skeleton in Unreal until they are re-exported the same way. At 48k triangles it is fine for a hero character, but generate LODs in the
+chick's skeleton in Unreal until they are re-exported the same way. At 49k triangles it is fine for a hero character, but generate LODs in the
 Skeletal Mesh editor for crowds or distant views.
 
 **Animations for Unreal.** All clips are 30 fps and in place except the root-motion waddle. Loops repeat
@@ -154,8 +155,23 @@ medium or high confidence.
 | Bill | Adopted. All three preferred the new bill with medium confidence. |
 | Feet | Not adopted. Paddle-style webbing and darker claws never beat the original in three rounds, so the original feet are unchanged. |
 
-To tweak the shape, edit `tools/chick_geometry.py`. `CTRL` is the body profile. `tuft_size` and
-`displacement_amp` control how shaggy the down is. `bill` and `foot_parts` shape the bill and feet. Then rebuild:
+**Third iteration (whole model).** Each change was checked in blind A/B review against reference photos, with
+three independent reviewers per round and the same rule as before. Over three rounds the shape, flippers, legs
+and down were revised until every aspect passed. In the final round all three reviewers preferred the new
+model overall, two with high confidence.
+
+| Aspect | Final round |
+|---|---|
+| Shape | 3 of 3 preferred the new model, medium confidence |
+| Down and colour | 3 of 3, high confidence |
+| Legs and feet | 3 of 3, high or medium confidence |
+| Flippers | 3 of 3, medium confidence |
+| Head | 1 preferred the new model, 2 saw no clear winner. The head geometry is unchanged. |
+
+![iteration 3](pebble/Pebble_Chick/Compare_Iteration3.png)
+
+To tweak the shape, edit `tools/chick_geometry.py`. `CTRL_V3` is the body profile. `tuft_size`, `fine_tuft_size` and
+`displacement_amp` control the down, and `body_texture_v3` makes the colour and normal maps. `bill` and `foot_parts` shape the bill and feet. Then rebuild:
 
 ```
 pip install bpy numpy scipy pillow
@@ -163,4 +179,5 @@ python3 tools/build_pebble_chick.py --out pebble/Pebble_Chick
 python3 tools/make_chick_anims.py --blend pebble/Pebble_Chick/Pebble_Chick.blend --out pebble/Pebble_Chick
 python3 tools/verify_chick_anims.py pebble/Pebble_Chick
 python3 tools/render_chick_slide_travel.py pebble/Pebble_Chick
+python3 tools/render_chick_lookdev.py pebble/Pebble_Chick/Pebble_Chick.blend <out_dir>   # review views
 ```

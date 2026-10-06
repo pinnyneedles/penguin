@@ -7,24 +7,32 @@ FILES
 SK_Pebble_Chick.fbx          skeletal mesh in rest pose (mesh + skeleton, texture embedded); no animation.
 AN_Pebble_Chick_*.fbx        eleven animation clips, skeleton only (no mesh), one clip per file; see ANIMATIONS.
 T_Chick_Body_BaseColor.png   1024-square sRGB base colour for the down (also embedded in the mesh FBX).
+T_Chick_Body_Normal_DX.png   1024-square normal map of fine down fibres, DirectX convention, for Unreal.
+T_Chick_Body_Normal_GL.png   the same map in OpenGL convention, as used inside Blender (the FBX embeds
+                             this one; in Unreal use the DX file or tick Flip Green Channel).
 Pebble_Chick.blend           editable scene: mesh, rig, lights, camera (built by tools/build_pebble_chick.py).
 Pebble_Chick_Anims.blend     the same scene with all eleven clips as actions (tools/make_chick_anims.py).
 Pebble_Chick_*.gif           rendered previews: Idle, Waddle, Jump (start, loop, land), BellySlide
                              (start, loop, end, in place) and BellySlide_Travel (the same chain sliding
                              over snow with a following camera; display speed only).
 Preview_SlideLean.png        the slide loop leaning right, centred and leaning left, from the front.
-Preview_*.png, Compare_Eye_Bill.png, Preview_Animations.png   renders of the actual geometry.
+Preview_*.png, Compare_Eye_Bill.png, Compare_Iteration3.png, Preview_Animations.png
+                             renders of the actual geometry (Compare_Iteration3 shows the model
+                             before and after the third iteration, next to a reference photo).
 source_stats.json, anim_stats.json, anim_validation.json      counts and checks written by the tools.
 
 MESH
-47,908 triangles; 24,018 vertices; 8 material slots; 1 UV layer.
-One skinned mesh. The body and head are one continuous surface with about 840
-down tufts displaced into the geometry (shaggy at the hem, short on the head,
-nearly bare around the bill and eyes). Eyes, eyelids and bill are rigid to the
-head bone; flippers, toes and claws have blended weights.
-UVs: the body has a cylindrical unwrap with the seam down the back; it is the
-only part that uses the texture. Constant-colour parts have overlapping UVs, so
-this is not a lightmap or whole-character bake atlas.
+49,124 triangles; 24,626 vertices; 8 material slots; 1 UV layer.
+One skinned mesh. The body and head are one continuous surface shaped like a real chick: a tall,
+straight-sided column, heaviest low down, with broad shoulders flowing into a small head and no
+neck pinch. About 730 soft down clumps are displaced into the geometry (fuller at the hem, short
+on the head, nearly bare around the bill and eyes); finer down fibres come from the normal map.
+The down stops above short dark legs with faint scale rings, so the legs show above the feet.
+Eyes, eyelids and bill are rigid to the head bone; flippers, legs, toes and claws have blended
+weights. The flippers are long, hang close along the sides and use the body's down material.
+UVs: the body has a cylindrical unwrap with the seam down the back. The flippers and tail map onto
+strips of the same texture with the fibres running along them. Constant-colour parts have
+overlapping UVs, so this is not a lightmap or whole-character bake atlas.
 
 SKELETON
 16 bones, identical names, hierarchy and rest pose to Pebble:
@@ -40,8 +48,8 @@ SCALE / AXES (read from the exported FBX headers)
 FBX 7400, binary. UpAxis Z (+), FrontAxis X, UnitScaleFactor 1.0 (1 unit = 1 cm),
 30 fps. Blender scene: centimetres (unit scale 0.01), character faces -Y, Z up;
 the exporter converts to X forward.
-Rest bounds: about 107.7 cm wide (flipper to flipper) x 103.1 cm deep (bill tip
-to back) x 152.4 cm tall. Body alone is about 100 cm wide.
+Rest bounds: about 91 cm wide (flipper to flipper) x 102 cm deep (bill tip
+to back) x 152 cm tall. Body alone is about 84 cm wide.
 Origin/root at ground centre. Lowest sole point is 0.3 cm above the root plane.
 
 ANIMATIONS — 30 fps. In place unless noted; the root bone stays at the origin.
@@ -93,8 +101,8 @@ Locomotion -> BellySlide_Start -> Sliding -> BellySlide_End -> Locomotion, where
 Blend Space on steering input from -1 (LeanRight) through 0 (Loop) to +1 (LeanLeft).
 For a push-and-glide feel, add AnimNotifies on BellySlide_Loop frames 10 and 20 and give the
 character a short burst of speed on each, with friction slowing it during the glide.
-The lying body is centred over the root, about 155 cm wide (flipper to flipper), 190 cm long
-(bill to trailing feet) and 113 cm tall. While sliding, a smaller collision shape (for example a
+The lying body is centred over the root, about 148 cm wide (flipper to flipper), 184 cm long
+(bill to trailing feet) and 105 cm tall. While sliding, a smaller collision shape (for example a
 capsule of half-height about 57 cm and radius about 55 cm) fits it better than the standing
 capsule. The belly sits 1 cm below the root plane, so on a hard floor it reads as pressing into
 snow; raise the mesh 1 cm while sliding if your surface must not be touched.
@@ -118,11 +126,12 @@ UNREAL IMPORT — starting settings; not yet tested inside Unreal
    For Chick_Waddle_RootMotion tick Enable Root Motion in the sequence; leave it off for the rest.
 4. Materials. FBX carries the base colours and the embedded body texture, but
    not Blender's roughness and sheen reliably, so rebuild or check them:
-     M_Chick_Body       Base Color = T_Chick_Body_BaseColor (sRGB), Roughness 0.8.
-                        For a soft fuzzy rim, use the Cloth shading model with
-                        Fuzz Color about (0.35, 0.22, 0.12) and Cloth about 0.15–0.3,
+     M_Chick_Body       Base Color = T_Chick_Body_BaseColor (sRGB), Normal =
+                        T_Chick_Body_Normal_DX (Normal Map compression), Roughness 0.8.
+                        For the soft fuzzy rim, use the Cloth shading model with
+                        Fuzz Color about (0.55, 0.38, 0.24) and Cloth about 0.2,
                         or a Substrate Slab with FuzzAmount and FuzzColor.
-     M_Chick_Foot       (0.040, 0.034, 0.034), Roughness 0.65  — feet, eyelids
+     M_Chick_Foot       (0.030, 0.028, 0.030), Roughness 0.62  — legs, feet, eyelids
      M_Chick_Claw       (0.075, 0.070, 0.065), Roughness 0.35
      M_Chick_Bill       (0.022, 0.019, 0.021), Roughness 0.32  — upper bill
      M_Chick_BillLower  (0.050, 0.043, 0.043), Roughness 0.38
@@ -162,7 +171,7 @@ https://dev.epicgames.com/documentation/unreal-engine/groom-scalability-and-perf
 
 VALIDATION (tools/verify_chick_anims.py, results in anim_validation.json)
 Mesh: the skeletal mesh FBX reimports into a clean Blender scene with one mesh, one armature named
-"Armature", 16 bones, 47,908 triangles, 8 materials, embedded texture and normalized weights.
+"Armature", 16 bones, 49,124 triangles, 8 materials, embedded textures and normalized weights.
 Clips: every AN_ file reimports with the "Armature" node, the same 16 bones and the expected
 frame count; reimported bone positions match the source within 0.0001 cm. All four loops close
 exactly (first and last pose identical), including both lean loops. All clip boundaries listed

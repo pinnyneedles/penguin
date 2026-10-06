@@ -8,11 +8,11 @@ from mathutils import Vector
 from math import sin, cos, pi
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chick_geometry as G
-V3 = set(filter(None, os.environ.get('CHICK_V3', '').split(',')))     # iteration-3 candidates: shape, surface
-print('CHICK_V3', sorted(V3), flush=True)
-PROF = G.Profile(G.CTRL_V3 if 'shape' in V3 else G.CTRL)
-FIELD = G.TuftField(PROF, soft='surface' in V3)
-FINE = G.TuftField(PROF, seed=23, size_fn=G.fine_tuft_size, soft=True) if 'surface' in V3 else None
+# Iteration 3 (adopted after three blind review rounds against reference photos): column profile with
+# visible legs, soft down clumps plus a fine-down normal map, tawny ochre palette, longer flippers.
+PROF = G.Profile(G.CTRL_V3)
+FIELD = G.TuftField(PROF, soft=True)
+FINE = G.TuftField(PROF, seed=23, size_fn=G.fine_tuft_size, soft=True)
 
 argv=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else sys.argv[1:]
 OUT=os.path.abspath(argv[argv.index('--out')+1]) if '--out' in argv else os.path.join(os.getcwd(),'pebble','Pebble_Chick')
@@ -35,13 +35,13 @@ def mat(name,color,rough=.45):
     return m
 def fluffy(m):
     bs=m.node_tree.nodes.get('Principled BSDF')
-    for k,v in ([('Sheen Weight',.22),('Sheen Roughness',.6),('Sheen Tint',(.55,.38,.24,1))] if 'surface' in V3 else [('Sheen Weight',.15),('Sheen Roughness',.7),('Sheen Tint',(.35,.22,.12,1))]):
+    for k,v in [('Sheen Weight',.22),('Sheen Roughness',.6),('Sheen Tint',(.55,.38,.24,1))]:
         if k in bs.inputs: bs.inputs[k].default_value=v
     return m
 navy=fluffy(mat('M_Chick_DownDark',(0.024,0.011,0.004),.85))      # flippers, tail
 charcoal=mat('M_Chick_Bill',(0.022,0.019,0.021),.32)            # glossy near-black upper bill
 billlow=mat('M_Chick_BillLower',(0.05,0.043,0.043),.38)
-orange=mat('M_Chick_Foot',(0.030,0.028,0.030),.62) if 'surface' in V3 else mat('M_Chick_Foot',(0.04,0.034,0.034),.65)   # feet, legs, eyelids
+orange=mat('M_Chick_Foot',(0.030,0.028,0.030),.62)               # feet, legs, eyelids
 sole=mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
 cream=mat('M_Chick_Iris',(0.030,0.016,0.009),.12)               # dark brown-black glossy eye                   # small dark eye
 black=mat('M_Chick_Pupil',(0.009,0.008,0.01),.19)
@@ -51,15 +51,12 @@ skin=fluffy(mat('M_Chick_Body',(1,1,1),.8))
 def smooth(v): return max(0,min(1,v))**2*(3-2*max(0,min(1,v)))
 N=1024
 img=bpy.data.images.new('T_Chick_Body_BaseColor',width=N,height=N,alpha=False)
-if 'surface' in V3:
-    rgb,ngl,ndx=G.body_texture_v3(PROF,FIELD,FINE,N=N)
-else:
-    rgb=G.body_texture(PROF,FIELD,N=N); ngl=None
+rgb,ngl,ndx=G.body_texture_v3(PROF,FIELD,FINE,N=N)
 pixels=np.concatenate([rgb,np.ones((N,N,1))],axis=2).ravel().tolist()
 img.pixels.foreach_set(pixels); img.filepath_raw=os.path.join(OUT,'T_Chick_Body_BaseColor.png'); img.file_format='PNG'; img.save(); img.pack()
 tex=skin.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=img
 skin.node_tree.links.new(tex.outputs['Color'],skin.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
-if ngl is not None:
+if True:   # fine-down normal map: GL copy packed for Blender, DirectX copy for Unreal
     from PIL import Image as _PI
     nimg=bpy.data.images.new('T_Chick_Body_Normal',width=N,height=N,alpha=False)
     nimg.colorspace_settings.name='Non-Color'     # set before writing pixels; changing it later clears them
@@ -115,7 +112,7 @@ def body_w(p):
     h=smooth((p.z-.96)/.23); b=smooth((p.z-.38)/.38)
     return {'pelvis':(1-b)*(1-h),'body':b*(1-h),'head':h}
 # Pear-shaped body, neck and head as one continuous surface, displaced by real down tufts.
-verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.80 if 'surface' in V3 else 1.0)
+verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.80)
 print('BODY',info,flush=True)
 body=mesh('Body • continuous head and torso, tufted down',verts,faces,skin,body_w,0,uvs)
 
@@ -149,11 +146,11 @@ def torus(name,center,normal,major,minor,m,bone):
 
 _,EYES=G.anchors(PROF)
 for s,label in [(1,'L'),(-1,'R')]:
-    centers,widths=(G.flipper_centres_v3 if 'shape' in V3 else G.flipper_centres)(PROF,s)
+    centers,widths=G.flipper_centres_v3(PROF,s)
     def fw(p,L=label):
         t=smooth((.87-p.z)/.24); return {'flipper.'+L:1-t,'flipper_tip.'+L:t}
-    leaf('Flipper.'+label,[tuple(c) for c in centers],widths,.40 if 'shape' in V3 else .30,skin,fw,1,flat_x=True,disp=1.5 if 'shape' in V3 else 1.2,
-         uv_u0=(0.72 if s>0 else 0.23) if 'surface' in V3 else None)   # same down material as the body
+    leaf('Flipper.'+label,[tuple(c) for c in centers],widths,.40,skin,fw,1,flat_x=True,disp=1.5,
+         uv_u0=0.72 if s>0 else 0.23)   # same down material as the body, fibres along the flipper
     # Feet: three splayed toes with knuckles, hooked claws and scalloped webbing.
     def footw(p,L=label):
         t=.7*smooth((-.10-p.y)/.18); return {'foot.'+L:1-t,'toe.'+L:t}
@@ -162,13 +159,10 @@ for s,label in [(1,'L'),(-1,'R')]:
     for k,(vs,fs) in enumerate(claws): mesh(f'Claw {k+1}.'+label,vs,fs,sole,footw,0)
     for k,(vs,fs) in enumerate(webs): mesh(f'Web {k+1}.'+label,vs,fs,orange,footw,1)
     ell('Foot pad.'+label,(s*.226,-.045,.045),(.080,.090,.042),orange,'foot.'+label,seg=16,rings=10)
-    if 'shape' in V3:
-        vs,fs=G.tarsus(s)
-        def legw(p,L=label):
-            t=smooth((.12-p.z)/.07); return {'leg.'+L:1-t,'foot.'+L:t}
-        mesh('Leg.'+label,vs,fs,orange,legw,1)
-    else:
-        ell('Ankle.'+label,(s*.226,.0,.17),(.075,.08,.12),orange,'leg.'+label,seg=16,rings=10)
+    vs,fs=G.tarsus(s)                       # short dark leg showing below the down
+    def legw(p,L=label):
+        t=smooth((.12-p.z)/.07); return {'leg.'+L:1-t,'foot.'+L:t}
+    mesh('Leg.'+label,vs,fs,orange,legw,1)
     # Small dark eye set into the head under a lid of bare skin.
     P,n=EYES[label]; P=Vector(P); n=Vector(n).normalized()
     up=Vector((0,0,1)); side=n.cross(up).normalized()
@@ -185,7 +179,7 @@ mesh('Bill upper',uv_,uf_,charcoal,rigid('head'),1)
 mesh('Bill lower',lv_,lf_,billlow,rigid('head'),1)
 
 # No crest on a chick; the 'crest' bone is kept so the skeleton matches Pebble's clips.
-leaf('Tail tuft',[(0,.36,.30),(0,.40,.32),(0,.44,.35)],[.07,.06,.002],.5,skin,rigid('tail'),1,disp=.6,uv_u0=0.03 if 'surface' in V3 else None)
+leaf('Tail tuft',[(0,.36,.30),(0,.40,.32),(0,.44,.35)],[.07,.06,.002],.5,skin,rigid('tail'),1,disp=.6,uv_u0=0.03)
 
 # Correct face winding/normals and consolidate to one skinned mesh.
 bpy.ops.object.select_all(action='DESELECT')

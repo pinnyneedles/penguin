@@ -20,28 +20,6 @@ from scipy.ndimage import zoom
 TAU = 2 * np.pi
 
 # (z, half-width x, half-depth y, forward offset of the section centre; negative = forward)
-CTRL = np.array([
-    (0.100, 0.000, 0.000, -0.020),
-    (0.110, 0.150, 0.140, -0.020),
-    (0.150, 0.310, 0.290, -0.025),
-    (0.220, 0.400, 0.370, -0.035),
-    (0.320, 0.455, 0.415, -0.045),
-    (0.450, 0.480, 0.435, -0.050),   # widest: the low, heavy belly of a chick
-    (0.580, 0.470, 0.425, -0.045),
-    (0.720, 0.430, 0.390, -0.035),
-    (0.860, 0.365, 0.335, -0.025),
-    (0.980, 0.290, 0.275, -0.020),
-    (1.080, 0.230, 0.228, -0.025),   # neck
-    (1.150, 0.218, 0.226, -0.035),
-    (1.240, 0.232, 0.250, -0.050),   # head, slightly longer front to back
-    (1.330, 0.228, 0.250, -0.055),
-    (1.410, 0.196, 0.215, -0.050),
-    (1.470, 0.140, 0.155, -0.045),
-    (1.505, 0.070, 0.078, -0.040),
-    (1.518, 0.000, 0.000, -0.040),
-])
-
-
 # Iteration 3: taller, straighter column like a real chick, shoulders that flow into the head
 # (no neck pinch), and a hem raised so the short grey legs show above the feet.
 CTRL_V3 = np.array([
@@ -72,7 +50,8 @@ def smoothstep(x):
 
 
 class Profile:
-    def __init__(self, ctrl=CTRL):
+    def __init__(self, ctrl=None):
+        ctrl = CTRL_V3 if ctrl is None else ctrl
         z, rx, ry, cy = ctrl.T
         rm = (rx + ry) / 2
         p = np.concatenate([[0], np.cumsum(np.hypot(np.diff(rm), np.diff(z)))])
@@ -251,42 +230,6 @@ def body_mesh(prof: Profile, field: TuftField, seg=128, amp_scale=1.0):
         b = (R - 1) * seg
         faces.append((b + j, b + nj, top)); uvs.append([(j / seg, V[-2]), ((j + 1) / seg, V[-2]), ((j + .5) / seg, 1.0)])
     return verts, faces, uvs, dict(rings=R + 2, seg=seg, tufts=field.count)
-
-
-def body_texture(prof: Profile, field: TuftField, N=1024, seed=7):
-    """Base colour (N, N, 3) in linear RGB; row 0 = v 0 (bottom). Matches body_mesh UVs."""
-    rng = np.random.default_rng(seed)
-    v = (np.arange(N) + 0.5) / N
-    u = (np.arange(N) + 0.5) / N
-    UU, VV = np.meshgrid(u, v)
-    a = (UU - 0.5) * TAU
-    t = VV * prof.T
-    P = prof.point(a, t)
-    z = P[..., 2]
-    F = field(a, t)
-    Fn = np.clip(F / np.percentile(F, 99), 0, 1)
-
-    def octave(nx, ny, amp):
-        g = rng.standard_normal((ny, nx))
-        return amp * zoom(g, (N / ny, N / nx), order=3, mode='grid-wrap')
-    strands = octave(512, 48, .5) + octave(1024, 128, .35) + octave(128, 24, .3)   # streaks along the down
-    blotch = octave(8, 6, .5) + octave(24, 16, .3)
-    front = (np.cos(a) + 1) / 2
-    dark = np.array([.15, .078, .034]); light = np.array([.30, .165, .074])
-    k = np.clip(front ** 1.3 * (1 - .35 * smoothstep((z - 1.15) / .3)) + .08 * blotch, 0, 1)
-    rgb = dark * (1 - k[..., None]) + light * k[..., None]
-    rgb = rgb * (0.58 + 0.55 * Fn ** 0.8)[..., None]                 # dark between tufts, lighter tips
-    rgb = rgb * (1 + .20 * np.clip(strands, -1.5, 1.5))[..., None]
-    rgb = rgb * (1 - .18 * smoothstep((.40 - z) / .25))[..., None]    # dusty hem
-    bill, eyes = anchors(prof)
-    db = np.linalg.norm(P - bill, axis=-1)
-    fm = 0.8 * (1 - smoothstep((db - 0.05) / 0.07))                  # bare grey skin at the bill base
-    skin = np.array([.11, .095, .085]) * (1 + .08 * np.clip(strands, -1.5, 1.5))[..., None]
-    rgb = rgb * (1 - fm[..., None]) + skin * fm[..., None]
-    for E, _ in eyes.values():
-        de = np.linalg.norm(P - E, axis=-1)
-        rgb *= (1 - .45 * (1 - smoothstep((de - .03) / .03)))[..., None]   # darker ring round the eye
-    return np.clip(rgb, 0, 1)
 
 
 def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, seed=7):
@@ -473,18 +416,6 @@ def foot_parts(side, n=10, k=12):
         top[..., 2] = top[..., 2] - 0.006
         webs.append(grid_solid(top, 0.013))
     return toes, claws, webs
-
-
-def flipper_centres(prof: Profile, side, k=10):
-    """Flipper hangs along the side of the body, flat against the down, slightly off at the tip."""
-    zs = np.linspace(0.985, 0.40, k)
-    ts = prof.t_at_z(zs)
-    z, rx, ry, cy = prof.at(ts)
-    off = 0.016 + 0.040 * ((0.985 - zs) / 0.585) ** 1.6
-    x = side * (rx + off)
-    y = cy + 0.025 + 0.035 * (0.985 - zs) / 0.585
-    widths = np.array([.030, .058, .074, .080, .080, .076, .068, .054, .032, .004])
-    return np.stack([x, y, zs], 1), widths
 
 
 # ---------------------------------------------------------------------------
