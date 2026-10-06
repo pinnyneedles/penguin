@@ -75,8 +75,8 @@ modelled from a reference photo of a real chick:
 
 - **Pear-shaped body.** The body is lowest and widest at the belly, with a forward belly bulge, a visible neck and a smaller, slightly elongated head.
 - **Real down in the mesh.** About 840 overlapping teardrop tufts hang downward and are displaced into the surface. They are long and shaggy at the hem, full on the body and short on the head, and the skin is nearly bare around the bill and eyes. The base-colour texture is generated from the same tuft field, so the dark creases and lighter tuft tips line up with the geometry.
-- **Bill.** The bill is stout, tapered and slightly decurved, built as two mandibles.
-- **Eyes.** The small dark eyes are set into the head under a ring of bare skin.
+- **Bill.** The bill is glossy near-black, tapered and slightly decurved. The upper mandible has a ridge and a tip that hooks just past the lower one.
+- **Eyes.** The small eyes are dark brown-black and glossy, set into the head under a thin, low ring of bare skin.
 - **Feet.** Each foot has three thick, knuckled toes with hooked claws and webbing almost to the tips.
 - **Flippers.** The flippers hang flat against the sides and use the same down material as the body.
 
@@ -84,7 +84,7 @@ modelled from a reference photo of a real chick:
 
 | | |
 |---|---|
-| Triangles | 45,972 |
+| Triangles | 47,908 |
 | Material slots | 8 (body down uses a 1024-square texture, the rest are flat colours) |
 | Skeleton | Pebble's 16 bones, identical names, max 2 influences, weights normalized |
 | Height | about 152 cm, matching Pebble's scale |
@@ -95,15 +95,27 @@ modelled from a reference photo of a real chick:
 | `AN_Pebble_Chick_Idle.fbx`, `AN_Pebble_Chick_Jump.fbx`, `AN_Pebble_Chick_Waddle.fbx` | Idle (31 frames), jump test (48 frames) and waddle loop (33 frames) at 30 fps, in place. |
 | `T_Chick_Body_BaseColor.png` | Base colour for the down (sRGB). |
 | `Pebble_Chick.blend`, `Pebble_Chick_Waddle.blend` | Editable scenes. The second one has the waddle action added. |
-| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. `Preview_Sheet.png` shows hero, front, side and back views. |
+| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
 | `tools/chick_geometry.py` | All chick shapes: profile, tuft field, texture, bill, feet, flippers. Pure numpy. |
-| `tools/build_pebble_chick.py` | Builds the Blender scene, rig, clips, exports and previews using `chick_geometry.py`. |
+| `tools/build_pebble_chick.py` | Builds the Blender scene, rig, clips, exports and previews using `chick_geometry.py`. Pass `--no-previews` to skip the renders. |
+| `tools/render_chick_closeups.py` | Renders fixed close-ups of the eye, bill and feet from a built `.blend`, for comparing versions. |
 
 Import exactly as described for Pebble in `pebble/Pebble_Penguin/README_Unreal.txt`. Import the skeletal mesh
 first with no skeleton assigned. Then import each animation FBX with Import Mesh off and the new skeleton
 selected. Bone names match Pebble's, so you can also import the chick mesh onto Pebble's skeleton asset and
 share one Animation Blueprint. At 46k triangles it is fine for a hero character, but generate LODs in the
 Skeletal Mesh editor for crowds or distant views.
+
+**Second iteration (eyes, bill, feet).** Each part was changed only if it clearly beat the previous
+version in blind A/B review. Three independent reviewers saw randomised left and right renders next to the
+reference photo. A change was adopted only if at least two picked it and none preferred the old version with
+medium or high confidence.
+
+| Part | Result |
+|---|---|
+| Eyes | Adopted. All three reviewers preferred the new eye with high confidence. |
+| Bill | Adopted. All three preferred the new bill with medium confidence. |
+| Feet | Not adopted. Paddle-style webbing and darker claws never beat the original in three rounds, so the original feet are unchanged. |
 
 To tweak the shape, edit `tools/chick_geometry.py`. `CTRL` is the body profile. `tuft_size` and
 `displacement_amp` control how shaggy the down is. `bill` and `foot_parts` shape the bill and feet. Then rebuild:

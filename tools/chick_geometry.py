@@ -312,30 +312,15 @@ def grid_solid(top, thickness):
     return verts, faces
 
 
-def bill(prof: Profile, n=14, k=18, v2=False):
-    """Long, slender, slightly decurved chick bill: upper and lower mandibles."""
+def bill(prof: Profile):
+    """Long, slender, slightly decurved chick bill as two mandibles (see bill_v2 for the shapes)."""
     base_s = np.array(prof.point(0.0, prof.t_at_z(BILL_Z)))
     B = base_s + np.array([0, 0.035, 0])          # root sits inside the head
-    if v2:
-        return bill_v2(B, n=16, k=22)
-    s = np.linspace(0, 1, k)
-    Lb = 0.31
-    up = B + np.stack([0 * s, -Lb * s, 0.018 * s - 0.040 * s ** 2.6], 1)
-    w_up = 0.044 * (1 - s) ** 0.65 + 0.0015
-    h_up = 0.041 * (1 - s) ** 0.70 + 0.0015
-    upper = loft(up, w_up, h_up, n, top_scale=1.0, bot_scale=0.30, lift=0.004 * (1 - s))
-    Ll = 0.93 * Lb
-    lo = B + np.stack([0 * s, -Ll * s, -0.012 + 0.014 * s - 0.030 * s ** 2.6], 1)
-    w_lo = 0.038 * (1 - s) ** 0.75 + 0.0015
-    h_lo = 0.026 * (1 - s) ** 0.75 + 0.0012
-    lower = loft(lo, w_lo, h_lo, n, top_scale=0.28, bot_scale=1.0, lift=-0.006 * (1 - s))
-    return upper, lower
+    return bill_v2(B, n=16, k=22)
 
 
-def foot_parts(side, n=10, k=12, v2=False):
+def foot_parts(side, n=10, k=12):
     """Three splayed toes with knuckles and hooked claws, plus two webs between them."""
-    if v2:
-        return foot_parts_v2(side)
     cx = side * 0.226
     pad = np.array([cx, -0.045, 0.038])
     toes, claws, cls = [], [], []
@@ -381,7 +366,7 @@ def flipper_centres(prof: Profile, side, k=10):
 
 
 # ---------------------------------------------------------------------------
-# Iteration 2 candidates: ridged bill with gape, almond eyelids, paddle feet
+# Bill shapes (iteration 2: ridged, hooked, glossy; chosen over the iteration-1 bill in blind review)
 # ---------------------------------------------------------------------------
 def loft_shaped(C, w, h, n, shape):
     """Like loft(), but the section is given by shape(theta) -> (sx, sy) multipliers per ring index."""
@@ -405,7 +390,7 @@ def loft_shaped(C, w, h, n, shape):
 
 def bill_v2(B, n=16, k=22):
     """Upper mandible with a culmen ridge and a tip that hooks just past the lower one;
-    flat cutting edges meeting along a gape line that sweeps back and down at the base."""
+    flat cutting edges meeting along the gape line."""
     s = np.linspace(0, 1, k)
     Lb = 0.335
     up = B + np.stack([0 * s, -Lb * s, 0.020 * s - 0.050 * s ** 2.4], 1)
@@ -431,68 +416,3 @@ def bill_v2(B, n=16, k=22):
         return c * (1 - 0.18 * sn ** 2), sn
     lower = loft_shaped(lo, w_lo, h_lo, n, lo_shape)
     return upper, lower
-
-
-def eyelids(P, nrm, ax=0.037, ay=0.026, tilt=0.12, n=8, k=40):
-    """One continuous almond-shaped lid rim of bare skin hugging the eye: pointed front and back
-    corners, a fuller (slightly hooded) upper lid and a thinner lower lid, with no gaps."""
-    P = np.asarray(P, float); nrm = np.asarray(nrm, float); nrm = nrm / np.linalg.norm(nrm)
-    up = np.array([0, 0, 1.0]); fwd = np.cross(nrm, up); fwd /= np.linalg.norm(fwd)
-    if fwd[1] > 0: fwd = -fwd                  # fwd points toward the bill (-Y)
-    vv = up - nrm * (up @ nrm); vv /= np.linalg.norm(vv)
-    ct, st = np.cos(tilt), np.sin(tilt)
-    X = ct * fwd - st * vv; Y = st * fwd + ct * vv      # front corner sits a little lower
-    O = P - nrm * 0.004
-    th = np.arange(k) / k * TAU
-    sn = np.sin(th)
-    C = O[None] + np.outer(ax * np.cos(th), X) + np.outer(ay * sn * (0.72 + 0.28 * np.abs(sn)), Y)
-    r = 0.0036 + 0.0032 * np.clip(sn, 0, 1) ** 1.5 + 0.0006 * np.clip(-sn, 0, 1)
-    lift = 0.0012 * np.clip(sn, 0, 1)
-    verts, faces = [], []
-    for i in range(k):
-        rd = C[i] - O; rd -= nrm * (rd @ nrm); rd /= np.linalg.norm(rd)
-        for j in range(n):
-            ph = j / n * TAU
-            verts.append(tuple(C[i] + rd * r[i] * np.cos(ph) + nrm * (r[i] * 0.85 * np.sin(ph) + lift[i])))
-    for i in range(k):
-        i2 = (i + 1) % k
-        for j in range(n):
-            nj = (j + 1) % n
-            faces.append((i * n + j, i * n + nj, i2 * n + nj, i2 * n + j))
-    return [(verts, faces)]
-
-
-def foot_parts_v2(side, n=10, k=12):
-    """Baseline toes (smooth taper into the claw) with two targeted changes: the webbing is raised
-    to the toe centre-line and thickened so the foot reads as a paddle, and the claws are shorter,
-    more hooked and set into the toe tip."""
-    cx = side * 0.226
-    pad = np.array([cx, -0.045, 0.038])
-    toes, claws, cls = [], [], []
-    for base_ang, length in ((-0.48, 0.19), (0.0, 0.225), (0.48, 0.18)):
-        phi = side * (base_ang + 0.14)
-        d = np.array([np.sin(phi), -np.cos(phi), 0.0])
-        s = np.linspace(0, 1, k)
-        C = pad + np.outer(s * length, d) + np.stack([0 * s, 0 * s, 0.010 * np.sin(np.pi * s) - 0.014 * s], 1)
-        r = 0.038 * (1 - 0.45 * s) * (1 + 0.08 * np.sin(3 * np.pi * s) ** 2)
-        cls.append(C)
-        toes.append(loft(C, r, r * 0.80, n, bot_scale=0.75, cap_start=True))
-        tip = C[-1] - d * 0.020 + np.array([0, 0, 0.002]); m = 7; c = np.linspace(0, 1, m)
-        CC = tip + np.outer(c * 0.044, d) + np.stack([0 * c, 0 * c, -0.024 * c ** 1.8 + 0.006 * c], 1)
-        rc = 0.0122 * (1 - c) ** 0.85 + 0.0008      # narrower than the toe's underside, so no lump
-        claws.append(loft(CC, rc, rc * 1.1, 8, cap_start=True))
-    webs = []
-    for a, b in ((0, 1), (1, 2)):
-        nu, ns = 8, 6
-        sv = np.linspace(0, 1, ns)
-        top = np.zeros((nu, ns, 3))
-        for jj, sw in enumerate(sv):
-            umax = 0.93 - 0.16 * np.sin(np.pi * sw)
-            uu = np.linspace(0.05, umax, nu)
-            ia = np.interp(uu, np.linspace(0, 1, len(cls[a])), np.arange(len(cls[a])))
-            pa = np.array([np.interp(ia, np.arange(len(cls[a])), cls[a][:, q]) for q in range(3)]).T
-            pb = np.array([np.interp(ia, np.arange(len(cls[b])), cls[b][:, q]) for q in range(3)]).T
-            top[:, jj] = pa * (1 - sw) + pb * sw
-        top[..., 2] = top[..., 2] + 0.006
-        webs.append(grid_solid(top, 0.018))
-    return toes, claws, webs
