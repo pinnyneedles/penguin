@@ -6,7 +6,7 @@
 
 Conventions (all props):
   * Centimetres, Z up. Pivot on the floor at the centre of the footprint (icicles: top centre;
-    slide-chute pieces: centre of the entrance floor).
+    slide-chute pieces: centre of the entrance floor; igloo: floor centre of the dome, entrance along +X).
   * 100 cm grid. Blocks, ramps and chutes are multiples of 100 cm so they snap together.
   * UV0 is world-scaled (one texture tile = TILE cm), so all props share tileable texture sets
     and texel density stays even. Let Unreal generate lightmap UVs if you use baked lighting.
@@ -113,7 +113,7 @@ class Part:
             self.f.append(tuple(i + o for i in face)); self.m.append(mat)
             self.uv.append(uvs[k] if uvs is not None else None)
 
-    def build(self, name, mats, sharp_deg=35.0):
+    def build(self, name, mats, sharp_deg=35.0, recalc=True):
         me = bpy.data.meshes.new(name)
         me.from_pydata(self.v, [], self.f); me.update()
         ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
@@ -125,7 +125,7 @@ class Part:
             if uvs is not None:
                 for li, uv in zip(p.loop_indices, uvs): uvl.data[li].uv = uv
         box_project(ob, [i for i, u in enumerate(self.uv) if u is None], {i: self.m[i] for i in range(len(self.m))})
-        finish_mesh(ob, sharp_deg)
+        finish_mesh(ob, sharp_deg, recalc)
         return ob
 
 
@@ -143,9 +143,9 @@ def box_project(ob, face_ids, face_mat):
             uvl.data[li].uv = (u / tile, v / tile)
 
 
-def finish_mesh(ob, sharp_deg):
+def finish_mesh(ob, sharp_deg, recalc=True):
     bm = bmesh.new(); bm.from_mesh(ob.data)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if recalc: bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     ngons = [f for f in bm.faces if len(f.verts) > 4]                 # FBX can't export tangents for n-gons
     if ngons: bmesh.ops.triangulate(bm, faces=ngons, quad_method="BEAUTY", ngon_method="BEAUTY")
     thr = math.radians(sharp_deg)
@@ -528,6 +528,310 @@ def fish(name, mats):
     return ob, [hull_object(f"UCX_{name}_00", pts)], [], dict(size_cm=[round(d) for d in ob.dimensions], pivot="centre")
 
 
+# ---------------------------------------------------------------------------
+# Igloo: a dome of snow blocks with an entrance tunnel along +X and a sleeping bench at the back
+# ---------------------------------------------------------------------------
+IG_RH, IG_RV, IG_WALL = 250.0, 265.0, 30.0            # inner radii (horizontal, vertical), wall thickness
+IG_TW, IG_TH, IG_TT, IG_TL = 70.0, 110.0, 25.0, 150.0  # tunnel inner half-width, wall height, wall thickness, length
+IG_PROUD, IG_GAP, IG_BEVEL = 5.0, 2.0, 3.0            # blocks stand 5 cm proud of the wall with 4 cm joints
+IG_BENCH_X, IG_BENCH_H = -110.0, 45.0                 # sleeping bench: front edge and height
+
+
+def ellipsoid_solid(rh, rv, z_cut, seg=48, rings=24):
+    """Closed solid: the part of an ellipsoid above z = z_cut, capped flat."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=1.0)
+    for v in bm.verts: v.co = Vector((v.co.x * rh, v.co.y * rh, v.co.z * rv))
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, z_cut),
+                           plane_no=(0, 0, 1), clear_inner=True)
+    bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=0)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def arch_prism(a, h, zb, x0, x1, n=16):
+    """Closed tunnel solid along X: floor at zb, walls up to h, semicircular roof of radius a."""
+    prof = [(a, zb)] + [(a * math.cos(t), h + a * math.sin(t)) for t in np.linspace(0, math.pi, n + 1)] + [(-a, zb)]
+    bm = bmesh.new()
+    A = [bm.verts.new((x0, y, z)) for y, z in prof]; B = [bm.verts.new((x1, y, z)) for y, z in prof]
+    m = len(prof)
+    for k in range(m): bm.faces.new((A[k], A[(k + 1) % m], B[(k + 1) % m], B[k]))
+    bm.faces.new(A[::-1]); bm.faces.new(B)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def apply_boolean(ob, bm, op):
+    me = bpy.data.meshes.new("cutter"); bm.to_mesh(me); bm.free()
+    cut = bpy.data.objects.new("cutter", me); bpy.context.scene.collection.objects.link(cut)
+    mod = ob.modifiers.new("bool", "BOOLEAN"); mod.operation = op; mod.solver = "EXACT"; mod.object = cut
+    bpy.context.view_layer.objects.active = ob; bpy.ops.object.modifier_apply(modifier=mod.name)
+    bpy.data.objects.remove(cut)
+
+
+def add_oriented(part, idx, ref, mat):
+    """Add a face, flipped if needed so its normal points along ref."""
+    pts = [Vector(part.v[i]) for i in idx]
+    n = Vector()
+    for k in range(len(pts)):
+        a, b = pts[k], pts[(k + 1) % len(pts)]
+        n += Vector(((a.y - b.y) * (a.z + b.z), (a.z - b.z) * (a.x + b.x), (a.x - b.x) * (a.y + b.y)))
+    part.f.append(tuple(idx if n.dot(ref) >= 0 else idx[::-1])); part.m.append(mat); part.uv.append(None)
+
+
+def snow_block(part, surf, u0, u1, v0, v1, lift, nu=4, nv=3, mat="Snow", open_sides=()):
+    """One hand-cut snow block on the surface surf(u, v) -> (point, outward normal): a pillowed top
+    IG_PROUD proud of the wall with rounded edges and sides that run 4 cm into the wall. The cell is inset
+    by IG_GAP on each side to leave a joint, except on sides listed in open_sides ('u0', 'u1', 'v0', 'v1')."""
+    um, vm = (u0 + u1) / 2, (v0 + v1) / 2
+    lu = (surf(u1, vm)[0] - surf(u0, vm)[0]).length / (u1 - u0)
+    lv = (surf(um, v1)[0] - surf(um, v0)[0]).length / (v1 - v0)
+    ua = u0 + (0 if "u0" in open_sides else IG_GAP / lu); ub = u1 - (0 if "u1" in open_sides else IG_GAP / lu)
+    va = v0 + (0 if "v0" in open_sides else IG_GAP / lv); vb = v1 - (0 if "v1" in open_sides else IG_GAP / lv)
+    uv = lambda i, j: (ua + (ub - ua) * i / nu, va + (vb - va) * j / nv)
+    top, bot = {}, {}
+    for i in range(nu + 1):
+        for j in range(nv + 1):
+            P, N = surf(*uv(i, j))
+            edge = i in (0, nu) or j in (0, nv)
+            h = IG_PROUD + lift + (-IG_BEVEL if edge else 1.5 * math.sin(math.pi * i / nu) * math.sin(math.pi * j / nv))
+            top[i, j] = len(part.v); part.v.append(tuple(P + N * h))
+    ring = [(i, 0) for i in range(nu)] + [(nu, j) for j in range(nv)] + [(i, nv) for i in range(nu, 0, -1)] + [(0, j) for j in range(nv, 0, -1)]
+    for key in ring:
+        P, N = surf(*uv(*key)); bot[key] = len(part.v); part.v.append(tuple(P - N * 4.0))
+    Pc, Nc = surf(um, vm)
+    for i in range(nu):
+        for j in range(nv):
+            c = surf(*uv(i + 0.5, j + 0.5))[1]
+            add_oriented(part, [top[i, j], top[i + 1, j], top[i + 1, j + 1], top[i, j + 1]], c, mat)
+    for k in range(len(ring)):
+        p, q = ring[k], ring[(k + 1) % len(ring)]
+        mid = (Vector(part.v[top[p]]) + Vector(part.v[top[q]])) / 2
+        out = mid - Pc; out -= Nc * out.dot(Nc)                       # away from the block centre, along the wall
+        add_oriented(part, [top[q], top[p], bot[p], bot[q]], out, mat)
+
+
+def snow_cap_block(part, surf, phi0, lift, n=16, rings=3, mat="Snow"):
+    """Round key block closing the top of the dome, above latitude phi0 (surf(theta, phi))."""
+    lv = (surf(0, phi0 + 0.01)[0] - surf(0, phi0)[0]).length / 0.01
+    pa = phi0 + IG_GAP / lv
+    Pc, Nc = surf(0, math.pi / 2)
+    centre = len(part.v); part.v.append(tuple(Pc + Nc * (IG_PROUD + lift + 1.5)))
+    idx = []
+    for r in range(1, rings + 1):
+        ph = math.pi / 2 - (math.pi / 2 - pa) * r / rings
+        row = []
+        for k in range(n):
+            P, N = surf(2 * math.pi * k / n, ph)
+            h = IG_PROUD + lift + (-IG_BEVEL if r == rings else 1.5 * (1 - (r / rings) ** 2))
+            row.append(len(part.v)); part.v.append(tuple(P + N * h))
+        idx.append(row)
+    bot = []
+    for k in range(n):
+        P, N = surf(2 * math.pi * k / n, pa); bot.append(len(part.v)); part.v.append(tuple(P - N * 4.0))
+    for k in range(n):
+        k2 = (k + 1) % n
+        add_oriented(part, [centre, idx[0][k], idx[0][k2]], Nc, mat)
+        for r in range(rings - 1):
+            add_oriented(part, [idx[r][k], idx[r + 1][k], idx[r + 1][k2], idx[r][k2]], Nc, mat)
+        mid = (Vector(part.v[idx[-1][k]]) + Vector(part.v[idx[-1][k2]])) / 2
+        out = mid - Pc; out.z = 0
+        add_oriented(part, [idx[-1][k], bot[k], bot[k2], idx[-1][k2]], out, mat)
+
+
+def igloo_interior_uvs(me):
+    """Seam-free UVs on the curved inside walls (box projection leaves visible seams on a smooth dome):
+    the room wraps around Z with its seam above the doorway, the passage unrolls along its arch."""
+    uvl, tile, mer = me.uv_layers[0], TILE["Snow"], (IG_RH + IG_RV) / 2
+    for p in me.polygons:
+        cos_ = [me.vertices[i].co.copy() for i in p.vertices]
+        if min(c.z for c in cos_) > 0.5 and all(abs((c.x / IG_RH) ** 2 + (c.y / IG_RH) ** 2 + (c.z / IG_RV) ** 2 - 1) < 0.03 for c in cos_):
+            ths = [math.atan2(c.y, c.x) % (2 * math.pi) for c in cos_]
+            if max(ths) - min(ths) > math.pi: ths = [t + 2 * math.pi if t < math.pi else t for t in ths]
+            for li, c, th in zip(p.loop_indices, cos_, ths):
+                ph = math.asin(max(-1.0, min(1.0, c.z / IG_RV)))
+                uvl.data[li].uv = ((th - math.pi) * IG_RH * math.cos(ph) / tile, ph * mer / tile)
+            continue
+        ss = []
+        for c in cos_:
+            r = math.hypot(c.y, c.z - IG_TH)
+            if c.x < IG_RH * 0.4: break
+            if abs(abs(c.y) - IG_TW) < 0.5 and c.z <= IG_TH + 0.5:
+                ss.append(c.z if c.y < 0 else IG_TH + math.pi * IG_TW + (IG_TH - c.z))
+            elif abs(r - IG_TW) < 0.5 and c.z >= IG_TH - 0.5:
+                ss.append(IG_TH + (math.pi - math.atan2(c.z - IG_TH, c.y)) * IG_TW)
+            else: break
+        else:
+            for li, c, s_ in zip(p.loop_indices, cos_, ss): uvl.data[li].uv = (c.x / tile, s_ / tile)
+
+
+def igloo(name, mats, seed=1):
+    rnd = random.Random(seed)
+    rh_o, rv_o = IG_RH + IG_WALL, IG_RV + IG_WALL
+    a_o = IG_TW + IG_TT
+    x_end = rh_o + IG_TL
+    # --- the shell: outer dome + tunnel, hollowed by the room and the passage (1 cm floor left inside)
+    sb = ellipsoid_solid(rh_o, rv_o, 0.0)
+    me = bpy.data.meshes.new(name); sb.to_mesh(me); sb.free()
+    shell = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(shell)
+    apply_boolean(shell, arch_prism(a_o, IG_TH, 0.0, rh_o * 0.55, x_end), "UNION")
+    apply_boolean(shell, ellipsoid_solid(IG_RH, IG_RV, 1.0), "DIFFERENCE")
+    apply_boolean(shell, arch_prism(IG_TW, IG_TH, 1.0, 0.0, x_end + 20), "DIFFERENCE")
+    cb = bmesh.new(); cb.from_mesh(me)
+    bmesh.ops.dissolve_degenerate(cb, dist=0.05, edges=cb.edges[:]); cb.to_mesh(me); cb.free()
+    me.materials.append(mats["Snow"]); me.uv_layers.new(name="UVMap")
+    box_project(shell, range(len(me.polygons)), {i: "Snow" for i in range(len(me.polygons))})
+    igloo_interior_uvs(me)
+    finish_mesh(shell, 40)
+
+    def dome_surf(th, ph):
+        c, s_ = math.cos(ph), math.sin(ph)
+        P = Vector((rh_o * c * math.cos(th), rh_o * c * math.sin(th), rv_o * s_))
+        return P, Vector((c * math.cos(th) / rh_o, c * math.sin(th) / rh_o, s_ / rv_o)).normalized()
+
+    S = 2 * IG_TH + math.pi * a_o
+    def tunnel_surf(s_, x):                                              # s_ runs up the left wall, over, down the right
+        if s_ < IG_TH: return Vector((x, -a_o, s_)), Vector((0, -1, 0))
+        if s_ < IG_TH + math.pi * a_o:
+            al = math.pi - (s_ - IG_TH) / a_o
+            return Vector((x, a_o * math.cos(al), IG_TH + a_o * math.sin(al))), Vector((0, math.cos(al), math.sin(al)))
+        return Vector((x, a_o, IG_TH - (s_ - IG_TH - math.pi * a_o))), Vector((0, 1, 0))
+
+    def near_tunnel(p, margin):
+        y, aa = abs(p.y), a_o + margin
+        return p.x > 0 and y < aa and p.z < IG_TH + math.sqrt(max(aa * aa - y * y, 0.0))
+
+    blocks = Part()
+    # --- dome courses: 9 rings of blocks about 44 cm high, staggered, then a round key block on top
+    phi_cap, courses = math.radians(80), 9
+    window = None
+    for k in range(courses):
+        p0, p1 = phi_cap * k / courses, phi_cap * (k + 1) / courses
+        nb = max(5, round(2 * math.pi * rh_o * math.cos((p0 + p1) / 2) / 80))
+        step = 2 * math.pi / nb; off = (k % 2) * step / 2 + rnd.uniform(-0.12, 0.12) * step
+        for i in range(nb):
+            t0, t1 = off + i * step, off + (i + 1) * step
+            samples = [dome_surf(t, p)[0] for t in (t0, (t0 + t1) / 2, t1) for p in (p0, (p0 + p1) / 2, p1)]
+            if any(near_tunnel(q, IG_PROUD + IG_GAP + 3) for q in samples): continue
+            tm = math.atan2(math.sin((t0 + t1) / 2), math.cos((t0 + t1) / 2))
+            mat = "Snow"
+            if k == 2 and window is None and abs(tm - math.pi / 2) < step / 2:  # one clear ice block as a window
+                mat = window = "Ice"
+            snow_block(blocks, dome_surf, t0, t1, (-0.03 if k == 0 else p0), p1, rnd.uniform(-1.2, 1.2),
+                       mat=mat, open_sides=("v0",) if k == 0 else ())
+    snow_cap_block(blocks, dome_surf, phi_cap, 0.5)
+    # --- tunnel: rings of blocks along X, staggered, skipping any buried in the dome
+    xs = np.linspace(rh_o * 0.62, x_end, 6)
+    nbs = round(S / 45)
+    for r in range(len(xs) - 1):
+        L = S / nbs
+        edges = [0.0] + [L / 2 + L * i for i in range(nbs)] + [S] if r % 2 else [L * i for i in range(nbs + 1)]
+        edges[0], edges[-1] = -6.0, S + 6.0                              # run the bottom blocks into the ground
+        for i in range(len(edges) - 1):
+            c = tunnel_surf((edges[i] + edges[i + 1]) / 2, (xs[r] + xs[r + 1]) / 2)
+            q = c[0] + c[1] * IG_PROUD
+            if (q.x / rh_o) ** 2 + (q.y / rh_o) ** 2 + (q.z / rv_o) ** 2 < 1.0: continue
+            op = tuple(o for o, cond in (("u0", i == 0), ("u1", i == len(edges) - 2)) if cond)
+            snow_block(blocks, tunnel_surf, edges[i], edges[i + 1], xs[r], xs[r + 1], rnd.uniform(-1.0, 1.0),
+                       nu=3, nv=3, open_sides=op)
+    bob = blocks.build(name + "_blocks", mats, sharp_deg=40, recalc=False)
+
+    # --- sleeping bench against the back wall
+    rb = IG_RH + 2
+    a0 = math.acos(IG_BENCH_X / rb)
+    outline = [(rb * math.cos(a), rb * math.sin(a)) for a in np.linspace(a0, 2 * math.pi - a0, 17)]
+    bb = bmesh.new()
+    lo = [bb.verts.new((x, y, 0.0)) for x, y in outline]; hi = [bb.verts.new((x, y, IG_BENCH_H)) for x, y in outline]
+    m = len(outline)
+    for k in range(m): bb.faces.new((lo[k], lo[(k + 1) % m], hi[(k + 1) % m], hi[k]))
+    bb.faces.new(lo[::-1]); bb.faces.new(hi)
+    bmesh.ops.recalc_face_normals(bb, faces=bb.faces)
+    front = [e for e in bb.edges if all(v.co.z > 1 and abs(v.co.x - IG_BENCH_X) < 1 for v in e.verts)]
+    bmesh.ops.bevel(bb, geom=front, offset=6.0, segments=3, profile=0.5, affect="EDGES", clamp_overlap=True)
+    bench_pts = [tuple(v.co) for v in bb.verts]
+    bench = bm_object(name + "_bench", bb, "Snow", mats); finish_mesh(bench, 40)
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in (shell, bob, bench): o.select_set(True)
+    bpy.context.view_layer.objects.active = shell; bpy.ops.object.join()
+    ob = shell
+
+    cols = igloo_collision(name, bench_pts)
+    socks = [socket("SOCKET_Entrance", ob, Matrix.Translation((x_end, 0, 1))),
+             socket("SOCKET_Interior", ob, Matrix.Translation((0, 0, 1))),
+             socket("SOCKET_Bench", ob, Matrix.Translation(((IG_BENCH_X - IG_RH) / 2, 0, IG_BENCH_H)))]
+    return ob, cols, socks, dict(size_cm=[round(d) for d in ob.dimensions], pivot="floor centre of the dome; entrance faces +X",
+                                 interior_height_cm=IG_RV - 1, interior_diameter_cm=2 * IG_RH,
+                                 doorway_cm=dict(width=2 * IG_TW, height=IG_TH + IG_TW - 1), bench_height_cm=IG_BENCH_H)
+
+
+def igloo_collision(name, bench_pts):
+    """Convex pieces that keep the room and the passage open: the dome wall in latitude bands and 30 degree
+    segments, cut around the tunnel; the tunnel walls and roof; the floor; the bench."""
+    cols = []
+    def hull(pts):
+        if len(pts) < 4: return
+        ext = [max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3)]
+        if min(ext) < 1.0: return
+        cols.append(hull_object(f"UCX_{name}_{len(cols):02d}", pts))
+    surfs = [(IG_RH, IG_RV), (IG_RH + IG_WALL + 3, IG_RV + IG_WALL + 3)]   # room side, outside over the blocks
+    a_i, a_c = IG_TW, IG_TW + IG_TT + 3
+    x_end = IG_RH + IG_WALL + IG_TL
+    arch = lambda y: IG_TH + math.sqrt(max(a_c * a_c - y * y, 0.0))
+    def on(rh, rv, th, ph): return (rh * math.cos(ph) * math.cos(th), rh * math.cos(ph) * math.sin(th), rv * math.sin(ph))
+    def x_at(rh, rv, y, z): return math.sqrt(max(rh * rh * (1 - (z / rv) ** 2) - y * y, 0.0))
+    bands = [math.radians(d) for d in (0, 20, 40, 60, 80)]
+    seg = math.radians(30)
+    for b in range(4):
+        p0, p1 = bands[b], bands[b + 1]
+        phs = np.linspace(p0, p1, 3)
+        door_band = b < 3
+        for k in range(12):
+            t0 = -seg / 2 + k * seg; tc = t0 + seg / 2
+            if door_band and abs(math.atan2(math.sin(tc), math.cos(tc))) < math.radians(46): continue
+            hull([on(rh, rv, t, p) for rh, rv in surfs for t in np.linspace(t0, t0 + seg, 4) for p in phs])
+        if not door_band: continue
+        lim = math.radians(45)                                          # three segments either side of +X
+        for side in (1, -1):                                            # wall beside the tunnel
+            pts = []
+            for rh, rv in surfs:
+                for p in phs:
+                    r = rh * math.cos(p)
+                    ts = math.asin(min(a_c / r, 1.0))
+                    pts += [(lambda q: (q[0], side * q[1], q[2]))(on(rh, rv, t, p)) for t in np.linspace(min(ts, lim), lim, 4)]
+            hull(pts)
+    # wall above the tunnel (|y| < a_c, over the arch, up to latitude 60): vertical strips cut at fixed heights
+    cuts = [-1e9, 165.0, 215.0, 1e9]
+    ys = np.linspace(-a_c, a_c, 5)
+    for y0, y1 in zip(ys[:-1], ys[1:]):
+        for j in range(3):
+            pts = []
+            for rh, rv in surfs:
+                top = rv * math.sin(bands[3])
+                yc = [sg * math.sqrt(a_c ** 2 - (c - IG_TH) ** 2) for c in cuts[1:3] for sg in (-1, 1)
+                      if 0 <= c - IG_TH <= a_c]                         # where the arch meets a cut
+                for y in sorted(set(np.linspace(y0, y1, 5)) | {v for v in yc if y0 < v < y1}):
+                    lo, hi = max(arch(y), cuts[j]), min(top, cuts[j + 1])
+                    if lo <= hi + 1e-6: pts += [(x_at(rh, rv, y, z), y, z) for z in sorted({lo, (lo + hi) / 2, hi})]
+            hull(pts)
+    tt = np.linspace(-seg / 2, 2 * math.pi - seg / 2, 36, endpoint=False)     # top: same samples as the band below
+    hull([on(rh, rv, t, bands[-1]) for rh, rv in surfs for t in tt] + [(0.0, 0.0, rv) for rh, rv in surfs])
+    # tunnel walls and roof, from the room's surface out to the entrance
+    for side in (1, -1):
+        corners = [(side * y, z) for y in (a_i, a_c) for z in (0.0, IG_TH)]
+        hull([(x_at(*surfs[0], y, z), y, z) for y, z in corners] + [(x_end, y, z) for y, z in corners])
+    for q in range(4):
+        al = np.linspace(math.pi * q / 4, math.pi * (q + 1) / 4, 3)
+        yz = [(r * math.cos(a), IG_TH + r * math.sin(a)) for r in (a_i, a_c / math.cos(math.pi / 16)) for a in al]  # outer chords clear the arc
+        hull([(x_at(*surfs[0], y, z), y, z) for y, z in yz] + [(x_end, y, z) for y, z in yz])
+    # floor (a thin slab, so the igloo stands on its own) and the bench
+    R = IG_RH + IG_WALL
+    hull([(R * math.cos(t), R * math.sin(t), z) for t in np.linspace(0, 2 * math.pi, 24, endpoint=False) for z in (-10.0, 1.0)])
+    hull([(x, y, z) for x in (IG_RH - 30, x_end) for y in (-a_c, a_c) for z in (-10.0, 1.0)])
+    hull(bench_pts)
+    return cols
+
+
 def kit_specs(mats):
     return [
         ("SM_IceBlock_200", lambda: ice_block("SM_IceBlock_200", mats, 200, 200, 200, seed=1)),
@@ -551,6 +855,7 @@ def kit_specs(mats):
         ("SM_Rock_C", lambda: rock("SM_Rock_C", mats, 120, seed=3, squash=(1.0, 0.9, 0.55))),
         ("SM_Icicles_Cluster", lambda: icicles("SM_Icicles_Cluster", mats, seed=1)),
         ("SM_Fish_Collectible", lambda: fish("SM_Fish_Collectible", mats)),
+        ("SM_Igloo", lambda: igloo("SM_Igloo", mats)),
     ]
 
 

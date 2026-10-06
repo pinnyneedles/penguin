@@ -360,5 +360,31 @@
       "M_Fish",
       "M_FishEye"
     ]
+  },
+  "SM_Igloo": {
+    "size_cm": [
+      716,
+      573,
+      311
+    ],
+    "pivot": "floor centre of the dome; entrance faces +X",
+    "interior_height_cm": 264.0,
+    "interior_diameter_cm": 500.0,
+    "doorway_cm": {
+      "width": 140.0,
+      "height": 179.0
+    },
+    "bench_height_cm": 45.0,
+    "triangles": 10934,
+    "collision_hulls": 65,
+    "sockets": [
+      "SOCKET_Entrance",
+      "SOCKET_Interior",
+      "SOCKET_Bench"
+    ],
+    "materials": [
+      "M_Snow",
+      "M_Ice"
+    ]
   }
 }

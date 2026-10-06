@@ -41,7 +41,9 @@ def smoothstep(e0, e1, x):
 
 
 def normals_from_height(H, strength):
-    """Tileable tangent-space normals (OpenGL: +Y up). H in texels of height * strength."""
+    """Tileable tangent-space normals (OpenGL: +Y up). strength is tuned at 1024 px and scaled with the
+    resolution so the bumps look the same at any texture size."""
+    strength *= H.shape[0] / 1024
     hx = (np.roll(H, -1, 1) - np.roll(H, 1, 1)) / 2
     hy = (np.roll(H, -1, 0) - np.roll(H, 1, 0)) / 2
     n = np.stack([-strength * hx, -strength * hy, np.ones_like(H)], -1)

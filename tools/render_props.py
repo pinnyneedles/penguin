@@ -2,7 +2,8 @@
 """Preview renders for the penguin level kit: a thumbnail per prop and a small level vignette with
 the chick for scale. Reads Penguin_Kit.blend written by tools/make_props.py.
 
-    python3 tools/render_props.py props/Kit [--chick pebble/Pebble_Chick/Pebble_Chick_Anims.blend] [--samples 32] [--keep-thumbs]
+    python3 tools/render_props.py props/Kit [--chick pebble/Pebble_Chick/Pebble_Chick_Anims.blend] [--samples 32]
+                                            [--keep-thumbs] [--vignette-only]
 """
 import json, math, os, sys
 import bpy
@@ -12,6 +13,7 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 KIT = os.path.abspath(argv[0])
 CHICK = argv[argv.index("--chick") + 1] if "--chick" in argv else "pebble/Pebble_Chick/Pebble_Chick_Anims.blend"
 SAMPLES = int(argv[argv.index("--samples") + 1]) if "--samples" in argv else 32
+VIGNETTE_ONLY = "--vignette-only" in argv                            # re-render just Kit_Vignette.png
 PREV = os.path.join(KIT, "Previews"); os.makedirs(PREV, exist_ok=True)
 
 bpy.ops.wm.open_mainfile(filepath=os.path.join(KIT, "Penguin_Kit.blend"))
@@ -51,7 +53,7 @@ sc.render.resolution_x = sc.render.resolution_y = 420
 home = {o.name: o.matrix_world.copy() for o in props}
 for o in props: o.hide_render = True
 thumbs = []
-for o in props:
+for o in ([] if VIGNETTE_ONLY else props):
     o.hide_render = False
     lo, hi = bbox(o); r = max((hi - lo).length / 2, 30)
     hang = o.name.startswith("SM_Icicles")
@@ -66,19 +68,49 @@ for o in props:
     print("thumb", o.name, flush=True)
 
 from PIL import Image, ImageDraw
-stats = json.load(open(os.path.join(KIT, "props_stats.json")))
-cols = 6; tw = 300; th = 330
-sheet = Image.new("RGB", (cols * tw, math.ceil(len(thumbs) / cols) * th), (244, 244, 242)); dr = ImageDraw.Draw(sheet)
-for i, (o, p) in enumerate(zip(props, thumbs)):
-    x, y = (i % cols) * tw, (i // cols) * th
-    sheet.paste(Image.open(p).convert("RGB").resize((tw - 10, tw - 10)), (x + 5, y + 5))
-    s = stats.get(o.name, {})
-    size = "x".join(str(int(v)) for v in s.get("size_cm", [])) if s.get("size_cm") else s.get("kind", "")
-    dr.text((x + 8, y + tw - 2), o.name.replace("SM_", ""), fill=(20, 20, 20))
-    dr.text((x + 8, y + tw + 12), f"{size}  {s.get('triangles', '')} tris", fill=(90, 90, 90))
-sheet.save(os.path.join(PREV, "Kit_Sheet.png"))
-if "--keep-thumbs" not in argv:                                       # the sheet carries them; keep the repo light
-    for p in thumbs: os.remove(p)
+
+
+def contact_sheet():
+    stats = json.load(open(os.path.join(KIT, "props_stats.json")))
+    cols = 6; tw = 300; th = 330
+    sheet = Image.new("RGB", (cols * tw, math.ceil(len(thumbs) / cols) * th), (244, 244, 242)); dr = ImageDraw.Draw(sheet)
+    for i, (o, p) in enumerate(zip(props, thumbs)):
+        x, y = (i % cols) * tw, (i // cols) * th
+        sheet.paste(Image.open(p).convert("RGB").resize((tw - 10, tw - 10)), (x + 5, y + 5))
+        s = stats.get(o.name, {})
+        size = "x".join(str(int(v)) for v in s.get("size_cm", [])) if s.get("size_cm") else s.get("kind", "")
+        dr.text((x + 8, y + tw - 2), o.name.replace("SM_", ""), fill=(20, 20, 20))
+        dr.text((x + 8, y + tw + 12), f"{size}  {s.get('triangles', '')} tris", fill=(90, 90, 90))
+    sheet.save(os.path.join(PREV, "Kit_Sheet.png"))
+    if "--keep-thumbs" not in argv:                                       # the sheet carries them; keep the repo light
+        for p in thumbs: os.remove(p)
+
+
+# ---- igloo close-ups: outside, back (ice window), inside by lamplight -----------------------------
+def igloo_views():
+    if "SM_Igloo" in bpy.data.objects:
+        ig = bpy.data.objects["SM_Igloo"]; ig.hide_render = False; ig.matrix_world = home["SM_Igloo"]
+        sc.render.resolution_x, sc.render.resolution_y = 800, 600
+        lamp = bpy.data.objects.new("Lamp", bpy.data.lights.new("Lamp", "POINT")); sc.collection.objects.link(lamp)
+        lamp.data.energy = 0; lamp.data.color = (1, .8, .55); lamp.location = (40, 60, 120)
+        panels = []
+        for nm, loc, tgt, lens, lamp_w in (("Outside", (1150, -900, 520), (60, 0, 110), 35, 0),
+                                           ("Back, with the ice-block window", (-900, 800, 600), (0, 0, 110), 35, 0),
+                                           ("Inside: sleeping bench, doorway behind", (200, -60, 120), (-200, 20, 60), 18, 3e5)):
+            lamp.data.energy = lamp_w; aim(loc, tgt); cd.lens = lens
+            sc.render.filepath = os.path.join(PREV, f"_igloo_{len(panels)}.png"); bpy.ops.render.render(write_still=True)
+            panels.append((nm, sc.render.filepath))
+        lamp.data.energy = 0; cd.lens = 50; ig.hide_render = True
+        pw, ph = 600, 450
+        im = Image.new("RGB", (pw * 3, ph + 30), (244, 244, 242)); dr = ImageDraw.Draw(im)
+        for i, (nm, path) in enumerate(panels):
+            im.paste(Image.open(path).convert("RGB").resize((pw - 6, ph - 6)), (i * pw + 3, 3))
+            dr.text((i * pw + 8, ph + 6), nm, fill=(20, 20, 20)); os.remove(path)
+        im.save(os.path.join(PREV, "Igloo_Views.png"))
+
+
+if not VIGNETTE_ONLY:
+    contact_sheet(); igloo_views()
 
 # ---- vignette: a little level built from the kit, with the chick for scale -----------------------
 gbase.default_value = (0.78, 0.82, 0.88, 1)                           # snowfield for the vignette
@@ -110,10 +142,11 @@ place("SM_IceBlock_100", (200, 650, 0)); place("SM_IceSlab_200x200x50", (650, 50
 place("SM_IceBlock_200", (850, 500, 0))
 place("SM_Icicles_Cluster", (650, 410, 200), 0)
 place("SM_Fish_Collectible", (-50, 150, 60), 30)
-place("SM_Ramp_Ice_400x200x200", (100, 500, 0), 180)
+place("SM_Ramp_Ice_400x200x200", (100, 500, 0))                  # climbs up onto the block stack
 # scenery
-place("SM_SnowMound_B", (-300, 900, 0)); place("SM_SnowMound_A", (900, -200, 0), 40)
-place("SM_Rock_C", (1200, 700, 0), 20); place("SM_Rock_B", (-600, 600, 0), 70); place("SM_Rock_A", (150, -50, 0), 10)
+place("SM_SnowMound_B", (1550, 150, 0)); place("SM_SnowMound_A", (900, -200, 0), 40)
+if "SM_Igloo" in bpy.data.objects: place("SM_Igloo", (-260, 920, 0), -80)
+place("SM_Rock_C", (1200, 700, 0), 20); place("SM_Rock_B", (-800, 380, 0), 70); place("SM_Rock_A", (150, -50, 0), 10)
 # water with floes
 wm = bpy.data.materials.new("Water"); wm.use_nodes = True
 wb = wm.node_tree.nodes["Principled BSDF"]; wb.inputs["Base Color"].default_value = (0.02, 0.08, 0.14, 1); wb.inputs["Roughness"].default_value = 0.05
