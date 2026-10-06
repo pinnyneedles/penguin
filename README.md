@@ -71,6 +71,11 @@ python3 tools/make_pebble_waddle.py --package pebble/Pebble_Penguin --out pebble
 
 ## Pebble Chick (brown king-penguin-chick variant)
 
+**Download for Unreal:** [`dist/PebbleChick_Unreal.zip`](dist/PebbleChick_Unreal.zip) has the mesh and skeleton, all
+eleven animations, the textures, reference data, previews and the Blender sources. Its `IMPORT_GUIDE.html`
+walks through importing into Unreal Engine 5 and setting up the Character and Animation Blueprints. The guide's
+source is `pebble/Pebble_Chick/IMPORT_GUIDE.md`, and `python3 tools/package_chick_unreal.py` rebuilds the zip.
+
 `pebble/Pebble_Chick/` is a king penguin chick built on Pebble's skeleton. Its geometry was modelled from
 reference photos of real chicks and refined over three iterations:
 

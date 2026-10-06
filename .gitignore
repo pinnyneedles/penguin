@@ -3,3 +3,4 @@ __pycache__/
 *.blend1
 _anim_frames/
 _pose_test.png
+dist/PebbleChick_Unreal/
