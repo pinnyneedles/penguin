@@ -45,10 +45,10 @@ CTRL = np.array([
 # Iteration 3: taller, straighter column like a real chick, shoulders that flow into the head
 # (no neck pinch), and a hem raised so the short grey legs show above the feet.
 CTRL_V3 = np.array([
-    (0.170, 0.000, 0.000, -0.015),
-    (0.178, 0.150, 0.140, -0.015),
-    (0.200, 0.292, 0.270, -0.020),
-    (0.250, 0.366, 0.336, -0.025),
+    (0.142, 0.000, 0.000, -0.015),
+    (0.150, 0.150, 0.140, -0.015),
+    (0.176, 0.292, 0.270, -0.020),
+    (0.232, 0.366, 0.336, -0.025),
     (0.320, 0.398, 0.362, -0.030),
     (0.420, 0.406, 0.368, -0.033),
     (0.560, 0.394, 0.358, -0.030),
@@ -136,9 +136,10 @@ class TuftField:
             r = (rx + ry) / 2
             n = max(3, int(round(TAU * r / (0.75 * W))))
             phase = rng.uniform(0, 1)
-            ang = (np.arange(n) + phase + rng.uniform(-0.3, 0.3, n)) / n * TAU - np.pi
-            tc = t + rng.uniform(-0.15, 0.15, n) * L
-            amp = rng.uniform(0.65, 1.15, n)
+            aj, tj = (0.45, 0.30) if soft else (0.3, 0.15)
+            ang = (np.arange(n) + phase + rng.uniform(-aj, aj, n)) / n * TAU - np.pi
+            tc = t + rng.uniform(-tj, tj, n) * L
+            amp = rng.uniform(0.5, 1.2, n) if soft else rng.uniform(0.65, 1.15, n)
             rows.append((t, n, phase, ang, tc, amp))
             t += 0.5 * L
         K = len(rows); nmax = max(r[1] for r in rows)
@@ -148,7 +149,7 @@ class TuftField:
         for k, (_, n, _, ang, tc, amp) in enumerate(rows):
             self.A[k, :n] = ang; self.TC[k, :n] = tc; self.AMP[k, :n] = amp
         W, L = size_fn(prof.at(self.TC)[0])
-        jit = rng.uniform(0.78, 1.28, W.shape)
+        jit = rng.uniform(0.7, 1.4, W.shape) if soft else rng.uniform(0.78, 1.28, W.shape)
         self.W, self.L = W * jit, L * jit * rng.uniform(0.85, 1.2, W.shape)
         self.prof = prof
         self.count = int(self.N.sum())
@@ -305,14 +306,14 @@ def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, se
     def octave(nx, ny, amp):
         g = rng.standard_normal((ny, nx))
         return amp * zoom(g, (N / ny, N / nx), order=3, mode="grid-wrap")
-    strands = octave(1024, 96, .45) + octave(512, 48, .35) + octave(256, 24, .2)      # fibres along the down
+    strands = octave(N, max(8, N // 12), .45) + octave(N // 2, max(4, N // 24), .35) + octave(N // 4, max(2, N // 48), .2)   # fibres along the down
     blotch = octave(8, 6, .5) + octave(24, 16, .3)
     front = (np.cos(a) + 1) / 2
-    dark = np.array([.175, .108, .058]); light = np.array([.285, .185, .100]); tip = np.array([.42, .30, .18])
+    dark = np.array([.175, .095, .052]); light = np.array([.280, .158, .088]); tip = np.array([.385, .232, .132])
     k = np.clip(0.35 + 0.45 * front - 0.15 * smoothstep((z - 1.15) / .3) + .06 * blotch, 0, 1)
     rgb = dark * (1 - k[..., None]) + light * k[..., None]
     rgb = rgb * (0.80 + 0.25 * Fn ** 0.8)[..., None]                       # gentle shading between clumps
-    tipm = np.clip(Gn ** 3 * 0.55 + 0.10 * np.clip(strands, 0, 2), 0, 1)
+    tipm = np.clip(Gn ** 3 * 0.25 + 0.16 * np.clip(strands, 0, 2), 0, 1)        # light fibre tips, no flake edges
     rgb = rgb * (1 - tipm[..., None]) + tip * tipm[..., None]               # light fluffy tips
     rgb = rgb * (1 + .10 * np.clip(strands, -1.5, 1.5))[..., None]
     rgb = rgb * (1 - .10 * smoothstep((.30 - z) / .12))[..., None]          # slightly dusty hem
@@ -327,7 +328,9 @@ def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, se
     rgb = np.clip(rgb, 0, 1)
     # height (cm) of fine clumps and fibres; flattened near the bill and eyes like the geometry
     face = np.clip(1 - fm / 0.75, 0, 1)
-    H = (0.55 * Gn + 0.12 * np.clip(strands, -2, 2)) * face
+    from scipy.ndimage import gaussian_filter
+    Gs = gaussian_filter(Gn, sigma=(1.5, 3.0), mode="wrap")              # soften clump edges
+    H = (0.28 * Gs + 0.24 * np.clip(strands, -2, 2)) * face            # mostly fibres along the down
     zz, rx, ry, cy = prof.at(t)
     r = np.maximum((rx + ry) / 2, 0.02)
     du = TAU * r / N * 100.0                       # texel width in cm around the body

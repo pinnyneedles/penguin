@@ -35,13 +35,13 @@ def mat(name,color,rough=.45):
     return m
 def fluffy(m):
     bs=m.node_tree.nodes.get('Principled BSDF')
-    for k,v in ([('Sheen Weight',.35),('Sheen Roughness',.55),('Sheen Tint',(.75,.58,.42,1))] if 'surface' in V3 else [('Sheen Weight',.15),('Sheen Roughness',.7),('Sheen Tint',(.35,.22,.12,1))]):
+    for k,v in ([('Sheen Weight',.22),('Sheen Roughness',.6),('Sheen Tint',(.55,.38,.24,1))] if 'surface' in V3 else [('Sheen Weight',.15),('Sheen Roughness',.7),('Sheen Tint',(.35,.22,.12,1))]):
         if k in bs.inputs: bs.inputs[k].default_value=v
     return m
 navy=fluffy(mat('M_Chick_DownDark',(0.024,0.011,0.004),.85))      # flippers, tail
 charcoal=mat('M_Chick_Bill',(0.022,0.019,0.021),.32)            # glossy near-black upper bill
 billlow=mat('M_Chick_BillLower',(0.05,0.043,0.043),.38)
-orange=mat('M_Chick_Foot',(0.075,0.072,0.075),.72) if 'surface' in V3 else mat('M_Chick_Foot',(0.04,0.034,0.034),.65)   # feet, legs, eyelids
+orange=mat('M_Chick_Foot',(0.052,0.050,0.053),.70) if 'surface' in V3 else mat('M_Chick_Foot',(0.04,0.034,0.034),.65)   # feet, legs, eyelids
 sole=mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
 cream=mat('M_Chick_Iris',(0.030,0.016,0.009),.12)               # dark brown-black glossy eye                   # small dark eye
 black=mat('M_Chick_Pupil',(0.009,0.008,0.01),.19)
@@ -115,7 +115,7 @@ def body_w(p):
     h=smooth((p.z-.96)/.23); b=smooth((p.z-.38)/.38)
     return {'pelvis':(1-b)*(1-h),'body':b*(1-h),'head':h}
 # Pear-shaped body, neck and head as one continuous surface, displaced by real down tufts.
-verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.8 if 'surface' in V3 else 1.0)
+verts,faces,uvs,info=G.body_mesh(PROF,FIELD,amp_scale=0.62 if 'surface' in V3 else 1.0)
 print('BODY',info,flush=True)
 body=mesh('Body • continuous head and torso, tufted down',verts,faces,skin,body_w,0,uvs)
 
