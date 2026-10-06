@@ -9,6 +9,8 @@ from math import sin, cos, pi
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chick_geometry as G
 PROF = G.Profile(); FIELD = G.TuftField(PROF)
+V2 = set(filter(None, os.environ.get('CHICK_V2', '').split(',')))   # eye, bill, feet
+print('CHICK_V2', sorted(V2), flush=True)
 
 argv=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else sys.argv[1:]
 OUT=os.path.abspath(argv[argv.index('--out')+1]) if '--out' in argv else os.path.join(os.getcwd(),'pebble','Pebble_Chick')
@@ -35,11 +37,11 @@ def fluffy(m):
         if k in bs.inputs: bs.inputs[k].default_value=v
     return m
 navy=fluffy(mat('M_Chick_DownDark',(0.024,0.011,0.004),.85))      # flippers, tail
-charcoal=mat('M_Chick_Bill',(0.045,0.04,0.045),.5)              # upper bill
-billlow=mat('M_Chick_BillLower',(0.10,0.085,0.085),.5)
+charcoal=mat('M_Chick_Bill',(0.022,0.019,0.021),.32) if 'bill' in V2 else mat('M_Chick_Bill',(0.045,0.04,0.045),.5)
+billlow=mat('M_Chick_BillLower',(0.05,0.043,0.043),.38) if 'bill' in V2 else mat('M_Chick_BillLower',(0.10,0.085,0.085),.5)
 orange=mat('M_Chick_Foot',(0.04,0.034,0.034),.65)               # feet and ankles
-sole=mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
-cream=mat('M_Chick_Iris',(0.11,0.06,0.03),.3)                   # small dark eye
+sole=mat('M_Chick_Claw',(0.028,0.025,0.024),.55) if 'feet' in V2 else mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
+cream=mat('M_Chick_Iris',(0.030,0.016,0.009),.12) if 'eye' in V2 else mat('M_Chick_Iris',(0.11,0.06,0.03),.3)                   # small dark eye
 black=mat('M_Chick_Pupil',(0.009,0.008,0.01),.19)
 white=mat('M_Chick_Glint',(1,.98,.9),.2)
 skin=fluffy(mat('M_Chick_Body',(1,1,1),.8))
@@ -129,7 +131,7 @@ for s,label in [(1,'L'),(-1,'R')]:
     # Feet: three splayed toes with knuckles, hooked claws and scalloped webbing.
     def footw(p,L=label):
         t=.7*smooth((-.10-p.y)/.18); return {'foot.'+L:1-t,'toe.'+L:t}
-    toes,claws,webs=G.foot_parts(s)
+    toes,claws,webs=G.foot_parts(s,v2='feet' in V2)
     for k,(vs,fs) in enumerate(toes): mesh(f'Toe {k+1}.'+label,vs,fs,orange,footw,1)
     for k,(vs,fs) in enumerate(claws): mesh(f'Claw {k+1}.'+label,vs,fs,sole,footw,0)
     for k,(vs,fs) in enumerate(webs): mesh(f'Web {k+1}.'+label,vs,fs,orange,footw,1)
@@ -138,14 +140,22 @@ for s,label in [(1,'L'),(-1,'R')]:
     # Small dark eye set into the head under a lid of bare skin.
     P,n=EYES[label]; P=Vector(P); n=Vector(n).normalized()
     up=Vector((0,0,1)); side=n.cross(up).normalized()
-    E=P-n*.012
-    ell('Eye.'+label,tuple(E),(.030,.030,.030),cream,'head',seg=16,rings=12)
-    ell('Pupil.'+label,tuple(E+n*.019),(.016,.016,.016),black,'head',seg=16,rings=10)
-    ell('Eye glint.'+label,tuple(E+n*.030+up*.009+side*.006*s),(.005,.005,.005),white,'head',seg=12,rings=8)
-    torus('Eyelid.'+label,tuple(P-n*.002),tuple(n),.031,.0075,orange,'head')
+    if 'eye' in V2:
+        # Dark, glossy eye set a little deeper, round pupil, and a thin low lid of bare skin.
+        E=P-n*.014
+        ell('Eye.'+label,tuple(E),(.030,.030,.030),cream,'head',seg=20,rings=14)
+        ell('Pupil.'+label,tuple(E+n*.018),(.017,.017,.017),black,'head',seg=16,rings=10)
+        ell('Eye glint.'+label,tuple(E+n*.0302+up*.009+side*.006*s),(.0034,.0034,.0034),white,'head',seg=12,rings=8)
+        torus('Eyelid.'+label,tuple(P-n*.004),tuple(n),.0312,.0048,orange,'head')
+    else:
+        E=P-n*.012
+        ell('Eye.'+label,tuple(E),(.030,.030,.030),cream,'head',seg=16,rings=12)
+        ell('Pupil.'+label,tuple(E+n*.019),(.016,.016,.016),black,'head',seg=16,rings=10)
+        ell('Eye glint.'+label,tuple(E+n*.030+up*.009+side*.006*s),(.005,.005,.005),white,'head',seg=12,rings=8)
+        torus('Eyelid.'+label,tuple(P-n*.002),tuple(n),.031,.0075,orange,'head')
 
 # Long, slender, slightly decurved bill in two mandibles.
-(uv_,uf_),(lv_,lf_)=G.bill(PROF)
+(uv_,uf_),(lv_,lf_)=G.bill(PROF,v2='bill' in V2)
 mesh('Bill upper',uv_,uf_,charcoal,rigid('head'),1)
 mesh('Bill lower',lv_,lf_,billlow,rigid('head'),1)
 
@@ -241,6 +251,6 @@ for v in char.data.vertices:
 stats={'vertices':len(char.data.vertices),'faces':len(char.data.polygons),'triangles':len(char.data.loop_triangles),'bones':len(arm.bones),'material_slots':len(char.data.materials),'uv_layers':len(char.data.uv_layers),'max_weight_influences':maxinf,'invalid_weight_vertices':len(bad),'dimensions_cm':list(char.dimensions),'animations':{'Pebble_Idle':[1,31],'Pebble_Jump_Test':[1,48]},'variant':'king penguin chick','fps':30,'blender_version':bpy.app.version_string}
 open(os.path.join(OUT,'source_stats.json'),'w').write(json.dumps(stats,indent=2))
 print('CHICK_STATS',json.dumps(stats),flush=True)
-for name,frame,loc,target,scale in [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Jump',18,(265,-470,250),(0,0,101),258),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215),('Preview_Side',1,(520,-30,120),(0,0,80),200)]:
+for name,frame,loc,target,scale in ([] if '--no-previews' in argv else [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Jump',18,(265,-470,250),(0,0,101),258),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215),('Preview_Side',1,(520,-30,120),(0,0,80),200)]):
     scene.frame_set(frame); cam.location=loc; track(cam,target); camdata.ortho_scale=scale; scene.render.filepath=os.path.join(OUT,name+'.png'); bpy.ops.render.render(write_still=True)
 print('CHICK_BUILD_COMPLETE',flush=True)
