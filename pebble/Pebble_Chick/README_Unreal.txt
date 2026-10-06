@@ -5,12 +5,14 @@ chick's own mesh, materials, animation set (tools/make_chick_anims.py) and impor
 
 FILES
 SK_Pebble_Chick.fbx          skeletal mesh in rest pose (mesh + skeleton, texture embedded); no animation.
-AN_Pebble_Chick_*.fbx        nine animation clips, skeleton only (no mesh), one clip per file; see ANIMATIONS.
+AN_Pebble_Chick_*.fbx        eleven animation clips, skeleton only (no mesh), one clip per file; see ANIMATIONS.
 T_Chick_Body_BaseColor.png   1024-square sRGB base colour for the down (also embedded in the mesh FBX).
 Pebble_Chick.blend           editable scene: mesh, rig, lights, camera (built by tools/build_pebble_chick.py).
-Pebble_Chick_Anims.blend     the same scene with all nine clips as actions (tools/make_chick_anims.py).
+Pebble_Chick_Anims.blend     the same scene with all eleven clips as actions (tools/make_chick_anims.py).
 Pebble_Chick_*.gif           rendered previews: Idle, Waddle, Jump (start, loop, land), BellySlide
-                             (start, loop twice, end).
+                             (start, loop, end, in place) and BellySlide_Travel (the same chain sliding
+                             over snow with a following camera; display speed only).
+Preview_SlideLean.png        the slide loop leaning right, centred and leaning left, from the front.
 Preview_*.png, Compare_Eye_Bill.png, Preview_Animations.png   renders of the actual geometry.
 source_stats.json, anim_stats.json, anim_validation.json      counts and checks written by the tools.
 
@@ -67,22 +69,35 @@ Chick_Jump_Loop                     25    0.80 s  yes   in the air: flippers fla
                                                         comes from Character Movement.
 Chick_Jump_Land                     18    0.57 s  no    air pose -> feet plant (frame 3) -> squash ->
                                                         rest. Play on landing.
-Chick_BellySlide_Start              24    0.80 s  no    rest -> crouch and lunge -> flop onto the belly
-                                                        (contact at frame 16-17) -> slide pose.
-Chick_BellySlide_Loop               33    1.07 s  yes   tobogganing on the belly, head up, flippers out,
-                                                        feet trailing on the ice and kicking in turn,
-                                                        body rocking. In place: drive the slide speed
-                                                        from gameplay.
+Chick_BellySlide_Start              28    0.93 s  no    rest -> crouch -> lunge -> belly hits the snow
+                                                        (frame 17) -> head overshoots and settles.
+Chick_BellySlide_Loop               65    2.13 s  yes   tobogganing, push and glide: left foot pushes
+                                                        (frame 10), right foot pushes (frame 20), then a
+                                                        long glide. Each push sets off a damped rock of
+                                                        the body (about 8 deg); the head sways with it
+                                                        about 4 frames late and a little further (about
+                                                        11 deg), glances around (about 18 deg in all) and
+                                                        dips after each push. Flippers balance against
+                                                        the rock. The belly rests 1 cm into the snow.
+Chick_BellySlide_Loop_LeanLeft      65    2.13 s  yes   the same loop banked about 9 deg into a left turn,
+Chick_BellySlide_Loop_LeanRight     65    2.13 s  yes   or a right turn: head turned about 18 deg into the
+                                                        turn, inside flipper lowered, feet trailing wide.
+                                                        Same frame count and timing as the centre loop,
+                                                        so the three blend cleanly.
 Chick_BellySlide_End                28    0.93 s  no    flippers push up, legs swing under, stand, settle
                                                         to rest.
 
 Suggested state machine: Locomotion (1D Blend Space on speed: Idle at 0, Waddle at 23.25 cm/s)
 -> Jump_Start -> Jump_Loop while airborne -> Jump_Land -> Locomotion.
-Locomotion -> BellySlide_Start -> BellySlide_Loop while sliding -> BellySlide_End -> Locomotion.
-The lying body is centred over the root, about 160 cm wide (flipper to flipper), 179 cm long
-(bill to trailing feet) and 114 cm tall (raised head). While sliding, a smaller collision shape
-(for example a capsule of half-height about 57 cm and radius about 55 cm) fits it better than
-the standing capsule.
+Locomotion -> BellySlide_Start -> Sliding -> BellySlide_End -> Locomotion, where Sliding is a 1D
+Blend Space on steering input from -1 (LeanRight) through 0 (Loop) to +1 (LeanLeft).
+For a push-and-glide feel, add AnimNotifies on BellySlide_Loop frames 10 and 20 and give the
+character a short burst of speed on each, with friction slowing it during the glide.
+The lying body is centred over the root, about 155 cm wide (flipper to flipper), 190 cm long
+(bill to trailing feet) and 113 cm tall. While sliding, a smaller collision shape (for example a
+capsule of half-height about 57 cm and radius about 55 cm) fits it better than the standing
+capsule. The belly sits 1 cm below the root plane, so on a hard floor it reads as pressing into
+snow; raise the mesh 1 cm while sliding if your surface must not be touched.
 Clips use the same skeleton and work on Pebble's mesh too, once Pebble's files are exported
 with the same "Armature" object name (see SKELETON).
 
@@ -120,8 +135,9 @@ UNREAL IMPORT — starting settings; not yet tested inside Unreal
    for your levels. The 0.3 cm sole offset can be ignored. Keep the skeletal
    mesh from blocking the movement capsule.
 6. Animation Blueprint: see the suggested state machine under ANIMATIONS. Add AnimNotifies for
-   footsteps on Chick_Waddle frames 1 and 17, landing on Chick_Jump_Land frame 3, and belly
-   impact on Chick_BellySlide_Start frame 17.
+   footsteps on Chick_Waddle frames 1 and 17, landing on Chick_Jump_Land frame 3, belly
+   impact on Chick_BellySlide_Start frame 17, and pushes on Chick_BellySlide_Loop frames 10
+   (left) and 20 (right). The same frames are listed in anim_stats.json.
 7. LODs: 47.9k triangles is fine for a player character. Generate LODs in the
    Skeletal Mesh editor for crowds or distant views.
 
@@ -149,10 +165,11 @@ Mesh: the skeletal mesh FBX reimports into a clean Blender scene with one mesh, 
 "Armature", 16 bones, 47,908 triangles, 8 materials, embedded texture and normalized weights.
 Clips: every AN_ file reimports with the "Armature" node, the same 16 bones and the expected
 frame count; reimported bone positions match the source within 0.0001 cm. All four loops close
-exactly (first and last pose identical). All nine clip boundaries listed under ANIMATIONS match
-exactly. In the root-motion waddle each planted foot stays fixed in the world: 0.0 cm slip and
+exactly (first and last pose identical), including both lean loops. All clip boundaries listed
+under ANIMATIONS match exactly. In the slide loop the head's roll lags the body's by 4 frames. In the root-motion waddle each planted foot stays fixed in the world: 0.0 cm slip and
 no rotation while planted (the previous waddle slid about 2.5 cm sideways and 1.3 cm front to
-back per step). No vertex goes below the ground in any frame of any clip.
+back per step). No vertex goes below the ground in any clip except the sliding belly, which presses exactly 1 cm
+into the snow by design.
 No Unreal project was opened; the import steps above are starting settings.
 
 KNOWN LIMITATIONS

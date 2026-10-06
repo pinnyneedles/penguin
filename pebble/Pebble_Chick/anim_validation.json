@@ -17,6 +17,14 @@
         0.0,
         0.0
       ],
+      "Chick_BellySlide_Loop_LeanLeft": [
+        0.0,
+        0.0
+      ],
+      "Chick_BellySlide_Loop_LeanRight": [
+        0.0,
+        0.0
+      ],
       "Chick_Waddle_RootMotion (relative to root)": [
         0.0,
         0.0
@@ -76,7 +84,33 @@
         "rotation": 0.0
       }
     },
-    "waddle_root_motion_cm_per_cycle": 24.8
+    "waddle_root_motion_cm_per_cycle": 0.0,
+    "belly_slide_sway": {
+      "Chick_BellySlide_Loop": {
+        "body_roll_deg": 8.2,
+        "head_roll_deg": 11.1,
+        "head_turn_deg": 18.2,
+        "mean_turn_deg": -0.0,
+        "mean_body_roll_deg": -0.0,
+        "head_lag_frames": 4
+      },
+      "Chick_BellySlide_Loop_LeanLeft": {
+        "body_roll_deg": 8.2,
+        "head_roll_deg": 12.0,
+        "head_turn_deg": 17.7,
+        "mean_turn_deg": 18.5,
+        "mean_body_roll_deg": -9.2,
+        "head_lag_frames": 4
+      },
+      "Chick_BellySlide_Loop_LeanRight": {
+        "body_roll_deg": 8.2,
+        "head_roll_deg": 11.8,
+        "head_turn_deg": 18.6,
+        "mean_turn_deg": -18.5,
+        "mean_body_roll_deg": 9.2,
+        "head_lag_frames": 4
+      }
+    }
   },
   "fbx": {
     "Chick_Idle": {
@@ -200,7 +234,7 @@
       "frames": [
         [
           1.0,
-          24.0
+          28.0
         ]
       ],
       "max_bone_head_error_cm": 0.0
@@ -218,7 +252,43 @@
       "frames": [
         [
           1.0,
-          33.0
+          65.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_BellySlide_Loop_LeanLeft": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          65.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_BellySlide_Loop_LeanRight": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          65.0
         ]
       ],
       "max_bone_head_error_cm": 0.0

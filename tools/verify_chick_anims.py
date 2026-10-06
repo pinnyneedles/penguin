@@ -12,8 +12,10 @@ from io_scene_fbx import parse_fbx
 
 D = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else sys.argv[1]
 CLIPS = ["Chick_Idle", "Chick_Waddle", "Chick_Waddle_RootMotion", "Chick_Jump_Start", "Chick_Jump_Loop",
-         "Chick_Jump_Land", "Chick_BellySlide_Start", "Chick_BellySlide_Loop", "Chick_BellySlide_End"]
-LOOPS = ["Chick_Idle", "Chick_Waddle", "Chick_Jump_Loop", "Chick_BellySlide_Loop"]
+         "Chick_Jump_Land", "Chick_BellySlide_Start", "Chick_BellySlide_Loop", "Chick_BellySlide_Loop_LeanLeft",
+         "Chick_BellySlide_Loop_LeanRight", "Chick_BellySlide_End"]
+LOOPS = ["Chick_Idle", "Chick_Waddle", "Chick_Jump_Loop", "Chick_BellySlide_Loop",
+         "Chick_BellySlide_Loop_LeanLeft", "Chick_BellySlide_Loop_LeanRight"]
 
 
 def use(rig, act):
@@ -94,8 +96,27 @@ for L in "LR":
                    x=round(float(np.ptp(P[seg, 0])), 3), y=round(float(np.ptp(P[seg, 1])), 3),
                    z=round(float(np.ptp(P[seg, 2])), 3), rotation=round(float(rot), 5))
 rep["source"]["waddle_planted_foot_slip_cm"] = slip
+# belly-slide head follow-through: body roll vs head roll and turn over the loop
+import math
+from mathutils import Vector
+sway = {}
+for k in ("Chick_BellySlide_Loop", "Chick_BellySlide_Loop_LeanLeft", "Chick_BellySlide_Loop_LeanRight"):
+    use(rig, A[k]); roll, hroll, hturn = [], [], []
+    for f in range(1, n[k]):
+        bpy.context.scene.frame_set(f)
+        pm = rig.pose.bones["pelvis"].matrix.to_3x3(); hm = rig.pose.bones["head"].matrix.to_3x3()
+        sp = pm @ Vector((1, 0, 0)); sh = hm @ Vector((1, 0, 0)); fh = hm @ Vector((0, 0, 1))
+        roll.append(math.atan2(sp.z, sp.x)); hroll.append(math.atan2(sh.z, sh.x)); hturn.append(math.atan2(fh.x, -fh.y))
+    roll, hroll, hturn = map(np.array, (roll, hroll, hturn))
+    a0 = roll - roll.mean(); b0 = hroll - hroll.mean()
+    lag = max(range(0, 12), key=lambda q: float(np.dot(a0, np.roll(b0, -q))))
+    sway[k] = dict(body_roll_deg=round(float(np.degrees(np.ptp(roll))), 1), head_roll_deg=round(float(np.degrees(np.ptp(hroll))), 1),
+                   head_turn_deg=round(float(np.degrees(np.ptp(hturn))), 1), mean_turn_deg=round(float(np.degrees(hturn.mean())), 1),
+                   mean_body_roll_deg=round(float(np.degrees(roll.mean())), 1), head_lag_frames=lag)
+rep_sway = sway
 root_travel = float(np.linalg.norm(np.array((rig.matrix_world @ rig.pose.bones["root"].matrix).translation)))
 rep["source"]["waddle_root_motion_cm_per_cycle"] = round(root_travel, 2)
+rep["source"]["belly_slide_sway"] = rep_sway
 
 # FBX round trip
 for k in CLIPS:

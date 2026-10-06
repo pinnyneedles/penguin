@@ -90,6 +90,19 @@ class Rig:
         self.acc[bone] = m
         self.rig.pose.bones[bone].rotation_quaternion = m.to_quaternion()
 
+    def world_rot(self, bone, yaw=0.0, roll=0.0, pitch=0.0):
+        """Extra rotation of a bone about world axes through its pivot (yaw about up, roll about the
+        travel direction, pitch about the side axis), on top of whatever its parents do."""
+        if abs(yaw) + abs(roll) + abs(pitch) < 1e-9:
+            return
+        W = Matrix.Rotation(yaw, 3, UP) @ Matrix.Rotation(roll, 3, FWD) @ Matrix.Rotation(pitch, 3, RIGHT)
+        self.update()
+        pb = self.rig.pose.bones[bone]
+        base = pb.parent.matrix.to_3x3() @ (self.rest3[pb.parent.name].inverted() @ self.rest3[bone])
+        new = base.inverted() @ W @ base @ self.acc.get(bone, Matrix.Identity(3))
+        self.acc[bone] = new
+        pb.rotation_quaternion = new.to_quaternion()
+
     def move(self, bone, vec):
         p = self.rig.pose.bones[bone]
         p.location = p.location + self.rest3[bone].transposed() @ Vector(vec)
@@ -134,6 +147,7 @@ def apply(R, prm):
     R.rot("pelvis", UP, g("pel_yaw")); R.rot("pelvis", FWD, g("pel_roll")); R.rot("pelvis", RIGHT, g("pel_pitch"))
     R.rot("body", UP, g("body_yaw")); R.rot("body", FWD, g("body_roll")); R.rot("body", RIGHT, g("body_pitch"))
     R.rot("head", UP, g("head_yaw")); R.rot("head", FWD, g("head_roll")); R.rot("head", RIGHT, g("head_pitch"))
+    R.world_rot("head", g("head_w_yaw"), g("head_w_roll"), g("head_w_pitch"))
     R.rot("tail", UP, g("tail_yaw")); R.rot("tail", RIGHT, g("tail_pitch"))
     for L, s in SIDES:
         R.rot("flipper." + L, UP, s * side_val(prm, "flip_twist", L))
@@ -366,7 +380,7 @@ def jump_land_params(loop0):
     return with_modes(fr, [((1, 2), "free"), ((3, 18), "feet")])
 
 
-LIE = dict(mode="belly", ik_w=0.0, pel_pitch=1.70, body_pitch=-0.62, head_pitch=-0.75,
+LIE = dict(mode="belly", ik_w=0.0, contact=-1.0, pel_pitch=1.45, body_pitch=-0.22, head_pitch=-1.00,
            flip_out=0.42, flip_swing=0.40, flip_tip=0.10, leg_pitch=0.30, foot_pitch=1.60,
            toe_pitch=0.20, tail_pitch=-0.20)
 FOOT_LIE_PITCH = 2.55        # toes point back, soles up, claws on the ice
@@ -395,47 +409,115 @@ def lie_params(lie_off, ankles):
     return p
 
 
-def slide_loop_params(lie_off, ankles, n=33):
+SLIDE_N = 65                     # 64 unique frames = 2.13 s: two pushes, then a long glide
+PUSHES = (("L", 0.03), ("R", 0.20))  # (foot, cycle time the kick starts)
+KICK_LEN = 0.16                  # kick duration in cycles (about 10 frames)
+
+
+def _bump(t, c, w):
+    d = ((t - c + 0.5) % 1.0) - 0.5
+    return math.exp(-0.5 * (d / w) ** 2)
+
+
+def _damped(t, t0, period=0.5, decay=0.22):
+    """Loop-safe damped oscillation started at t0 (ends on a zero crossing at the wrap)."""
+    tau = (t - t0) % 1.0
+    return math.exp(-tau / decay) * math.sin(TAU * tau / period)
+
+
+_KU = np.array([0.0, 0.30, 0.65, 1.0])
+_KY = PchipInterpolator(_KU, [0.0, -5.0, 9.0, 0.0])        # reach forward, then shove back
+_KZ = PchipInterpolator(_KU, [0.0, 4.0, 0.0, 0.0])         # lift, then press into the snow
+_KP = PchipInterpolator(_KU, [0.0, -0.25, 0.30, 0.0])      # toes up while reaching, dig in while pushing
+
+
+def _kick(t, t0):
+    u = ((t - t0) % 1.0) / KICK_LEN
+    if u >= 1.0:
+        return 0.0, 0.0, 0.0
+    return float(_KY(u)), float(_KZ(u)), float(_KP(u))
+
+
+def slide_body_roll(t):
+    """Body rocking about the travel axis: each push sets off a damped rock, plus slow balancing."""
+    r = 0.11 * _damped(t, PUSHES[0][1] + 0.06) - 0.11 * _damped(t, PUSHES[1][1] + 0.06)
+    return r + 0.035 * math.sin(TAU * (t - 0.40))
+
+
+def slide_loop_params(lie_off, ankles, n=SLIDE_N, lean=0.0):
+    """Tobogganing loop. lean: -1 (bank right) .. +1 (bank left) for a steering Blend Space."""
     out = []
     base = lie_params(lie_off, ankles)
+    lag = 4.0 / (n - 1)                       # head follows the body about 4 frames late
     for f in range(1, n + 1):
-        ph = TAU * (f - 1) / (n - 1)
+        t = (f - 1) / (n - 1)
         p = dict(base)
-        for L, s in SIDES:                     # alternate kicks: lift and push back
-            k = math.sin(ph + (0 if L == "L" else math.pi))
+        push = sum(_bump(t, t0 + 0.08, 0.05) for _, t0 in PUSHES)
+        push_late = sum(_bump(t, t0 + 0.08 + lag, 0.06) for _, t0 in PUSHES)
+        for L, s in SIDES:
+            t0 = dict(PUSHES)[L]
+            ky, kz, kp = _kick(t, t0)
             a = ankles[L]
-            p["ankle_" + L] = (a[0], a[1] + 5.0 * k, a[2] + 4.5 * max(0.0, k) ** 1.5)
-            p["ik_foot_pitch_" + L] = FOOT_LIE_PITCH - 0.25 * k
-        p.update(flip_out=0.42 + 0.10 * math.sin(2 * ph), flip_swing=0.40 + 0.10 * math.sin(2 * ph - 0.9),
-                 flip_tip=0.10 + 0.10 * math.sin(2 * ph - 1.4),
-                 pel_roll=0.05 * math.sin(ph), head_pitch=-0.75 + 0.03 * math.sin(2 * ph),
-                 tail_yaw=0.20 * math.sin(2 * ph))
+            drift = 0.8 * math.sin(TAU * (2 * t + (0.0 if L == "L" else 0.5)))   # relaxed trailing feet
+            p["ankle_" + L] = (a[0] - 5.0 * lean, a[1] + ky, a[2] + kz + drift * (1 - min(1, push * 2)))
+            p["ik_foot_pitch_" + L] = FOOT_LIE_PITCH + kp
+        roll = slide_body_roll(t)
+        roll_late = slide_body_roll(t - lag)
+        p.update(
+            pel_off=(lie_off[0], lie_off[1] - 2.5 * push, lie_off[2]),
+            pel_roll=roll - 0.16 * lean,
+            pel_yaw=0.04 * (_damped(t, PUSHES[0][1] + 0.05) - _damped(t, PUSHES[1][1] + 0.05)) + 0.10 * lean,
+            pel_pitch=LIE["pel_pitch"] + 0.03 * push,
+            body_pitch=LIE["body_pitch"] + 0.012 * math.sin(TAU * 2 * t),
+            head_pitch=LIE["head_pitch"],
+            # head sways with the rocking but a few frames late and a little further (follow-through),
+            # glances around slowly, dips after each push and looks into the turn when leaning
+            head_w_roll=1.35 * roll_late - roll + 0.05 * lean,
+            head_w_yaw=0.15 * math.sin(TAU * (t - 0.12)) + 0.04 * math.sin(TAU * 2 * t + 0.4) + 0.6 * roll_late + 0.25 * lean,
+            head_w_pitch=-0.07 * push_late + 0.025 * _bump(t, 0.40, 0.08),
+            tail_yaw=0.30 * slide_body_roll(t - 0.10),
+        )
+        for L, s in SIDES:
+            p["flip_out_" + L] = 0.42 - 0.08 * push + 1.2 * s * roll + 0.03 * math.sin(TAU * (t + 0.3 * s)) - 0.12 * s * lean
+            p["flip_swing_" + L] = 0.40 + 0.12 * push + 0.03 * math.sin(TAU * 2 * t + s)
+            p["flip_tip_" + L] = 0.10 + 0.08 * math.sin(TAU * (t - 0.08) + s)
         out.append(p)
     return out
+
+
+def slide_events(n=SLIDE_N):
+    """Frames where each push presses into the snow (for footstep / push AnimNotifies)."""
+    ev = {}
+    for L, t0 in PUSHES:
+        ev["push_" + L] = int(round((t0 + 0.65 * KICK_LEN) * (n - 1))) + 1
+    return ev
 
 
 def strip(d):
     return {k: v for k, v in d.items() if k != "mode" and not k.startswith("_")}
 
 
-def slide_start_params(R, loop0, lie_off):
+def slide_start_params(R, loop0, lie_off, n=28):
     lo = Vector(lie_off)
     lie = strip(loop0)
     dflt = {"ankle_" + L: tuple(R.rest_ankle[L]) for L, _ in SIDES}
+    feet = {k: v for k, v in lie.items() if k.startswith(("ankle_", "ik_foot_pitch_"))}
     keys = [(1, dict(ik_w=1.0)),
-            (6, dict(ik_w=1.0, pel_off=(0, -2, -5.5), pel_pitch=0.28, body_pitch=0.12, head_pitch=-0.10, flip_swing=0.35, flip_out=0.18)),
-            (10, dict(ik_w=1.0, pel_off=(0, -8, -3), pel_pitch=0.75, body_pitch=0.05, head_pitch=-0.35, flip_swing=0.55, flip_out=0.30)),
-            (13, dict(ik_w=0.0, pel_off=tuple(Vector((0, -8, -3)).lerp(lo, 0.55)), pel_pitch=1.20, body_pitch=-0.30,
-                      head_pitch=-0.55, flip_out=0.45, flip_swing=0.30, leg_pitch=0.35, foot_pitch=1.0)),
-            (15, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.55, body_pitch=-0.45, head_pitch=-0.62, flip_out=0.45,
-                      leg_pitch=0.30, foot_pitch=1.6, **{k: v for k, v in lie.items() if k.startswith(("ankle_", "ik_foot_pitch_"))})),
-            (17, dict(lie, body_pitch=-0.45, head_pitch=-0.62)),            # belly contact, head stays up
-            (20, dict(lie, body_pitch=-0.60, head_pitch=-0.80, flip_out=0.50)),
-            (24, lie)]
-    fr = keyed(keys, 24, dflt)
+            (7, dict(ik_w=1.0, pel_off=(0, -2, -5.5), pel_pitch=0.30, body_pitch=0.12, head_pitch=-0.10, flip_swing=0.35, flip_out=0.18)),
+            (11, dict(ik_w=1.0, pel_off=(0, -8, -3), pel_pitch=0.80, body_pitch=0.05, head_pitch=-0.40, flip_swing=0.55, flip_out=0.28)),
+            (14, dict(ik_w=0.0, pel_off=tuple(Vector((0, -8, -3)).lerp(lo, 0.55)), pel_pitch=1.15, body_pitch=-0.12,
+                      head_pitch=-0.70, flip_out=0.40, flip_swing=0.45, leg_pitch=0.35, foot_pitch=1.0)),
+            (16, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.38, body_pitch=-0.18, head_pitch=-0.85, flip_out=0.42,
+                      flip_swing=0.45, leg_pitch=0.30, foot_pitch=1.6, **feet)),
+            (17, dict(lie, pel_pitch=1.50, body_pitch=-0.12, head_pitch=-0.80, head_w_pitch=-0.06)),     # belly hits the snow
+            (20, dict(lie, pel_pitch=1.44, body_pitch=-0.26, head_pitch=-1.10, head_w_pitch=0.04, flip_out=0.50)),   # head overshoots up
+            (24, dict(lie, head_pitch=-0.96, head_w_pitch=-0.01)),
+            (n, lie)]
+    fr = keyed(keys, n, dflt)
     for f in fr:
         f["feet_ground"] = 0.4 if f.get("ik_w", 0) > 0.999 and f.get("pel_pitch", 0) > 1.0 else None
-    return with_modes(fr, [((1, 11), "feet"), ((12, 15), "free"), ((16, 24), "belly")])
+        f["contact"] = -1.0
+    return with_modes(fr, [((1, 12), "feet"), ((13, 16), "free"), ((17, n), "belly")])
 
 
 def slide_end_params(R, loop0, lie_off):
@@ -444,8 +526,8 @@ def slide_end_params(R, loop0, lie_off):
     dflt = {"ankle_" + L: tuple(R.rest_ankle[L]) for L, _ in SIDES}
     lie_feet = {k: v for k, v in lie.items() if k.startswith(("ankle_", "ik_foot_pitch_"))}
     keys = [(1, lie),
-            (5, dict(lie, flip_swing=-0.75, flip_out=0.35, body_pitch=-0.70, head_pitch=-0.65, pel_pitch=1.50)),
-            (8, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.30, body_pitch=-0.55, head_pitch=-0.45, flip_swing=-0.95,
+            (5, dict(lie, flip_swing=-0.75, flip_out=0.35, body_pitch=-0.35, head_pitch=-0.95, pel_pitch=1.40, head_w_yaw=0.0, head_w_roll=0.0)),
+            (8, dict(ik_w=0.0, pel_off=tuple(lo), pel_pitch=1.25, body_pitch=-0.30, head_pitch=-0.75, flip_swing=-0.95,
                      flip_out=0.30, leg_pitch=0.0, foot_pitch=1.2, **lie_feet)),
             (11, dict(ik_w=0.0, pel_off=tuple(lo.lerp(Vector((0, -4, -6)), 0.5)), pel_pitch=0.95, body_pitch=-0.35,
                       head_pitch=-0.30, flip_swing=-0.80, flip_out=0.25, leg_pitch=-0.70, foot_pitch=0.30)),
@@ -457,6 +539,7 @@ def slide_end_params(R, loop0, lie_off):
     fr = keyed(keys, 28, dflt)
     for i, f in enumerate(fr, start=1):
         f["feet_ground"] = 0.4 if i <= 5 else None
+        f["contact"] = -1.0
     return with_modes(fr, [((1, 7), "belly"), ((8, 14), "free"), ((15, 28), "feet")])
 
 
@@ -575,9 +658,11 @@ def main():
     sl = slide_loop_params(lie_off, lie_ankles)
     clips["Chick_BellySlide_Start"] = slide_start_params(R, sl[0], lie_off)
     clips["Chick_BellySlide_Loop"] = sl
+    clips["Chick_BellySlide_Loop_LeanLeft"] = slide_loop_params(lie_off, lie_ankles, lean=1.0)
+    clips["Chick_BellySlide_Loop_LeanRight"] = slide_loop_params(lie_off, lie_ankles, lean=-1.0)
     clips["Chick_BellySlide_End"] = slide_end_params(R, sl[0], lie_off)
     if a.pose_test:
-        clips = {k: v for k, v in clips.items() if k in ("Chick_BellySlide_Start", "Chick_BellySlide_Loop", "Chick_BellySlide_End")}
+        clips = {k: v for k, v in clips.items() if k.startswith("Chick_BellySlide")}
 
     acts, report = {}, {}
     for name, params in clips.items():
@@ -596,7 +681,9 @@ def main():
         if hasattr(acts["Chick_Idle"], "slots"): rig.animation_data.action_slot = acts["Chick_Idle"].slots[0]
         bpy.context.scene.frame_set(1)
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(a.out, "Pebble_Chick_Anims.blend"))
-        json.dump(dict(fps=FPS, waddle_speed_cm_s=SPEED, lie_pelvis_offset_cm=list(lie_off), clips=report),
+        json.dump(dict(fps=FPS, waddle_speed_cm_s=SPEED, lie_pelvis_offset_cm=list(lie_off), clips=report,
+                       events=dict(BellySlide_Loop=slide_events(), BellySlide_Start=dict(belly_impact=17),
+                                   Jump_Land=dict(feet_plant=3), Waddle=dict(step_L=1, step_R=17))),
                   open(os.path.join(a.out, "anim_stats.json"), "w"), indent=2)
 
     if a.no_render:
@@ -605,7 +692,7 @@ def main():
     tmp = os.path.join(a.out, "_anim_frames")
     if a.pose_test:
         from PIL import Image
-        shots = [("Chick_BellySlide_Start", f) for f in (6, 10, 13, 17, 24)] + [("Chick_BellySlide_Loop", 9), ("Chick_BellySlide_End", 9), ("Chick_BellySlide_End", 15)]
+        shots = [("Chick_BellySlide_Start", f) for f in (7, 11, 14, 17, 20)] + [("Chick_BellySlide_Loop", f) for f in (8, 18, 40)]
         paths = [render(R, acts[c], tmp, "slide", [f])[0] for c, f in shots]
         ims = [Image.open(p).convert("RGB") for p in paths]
         w = ims[0].width; sheet = Image.new("RGB", (w * 4, w * 2))
@@ -617,15 +704,26 @@ def main():
     P["js"] = render(R, acts["Chick_Jump_Start"], tmp, "jump", list(range(1, 11)))
     P["jl"] = render(R, acts["Chick_Jump_Loop"], tmp, "jump", list(range(1, 25)))
     P["jd"] = render(R, acts["Chick_Jump_Land"], tmp, "jump", list(range(1, 19)))
-    P["ss"] = render(R, acts["Chick_BellySlide_Start"], tmp, "slide", list(range(1, 25)))
-    P["sl"] = render(R, acts["Chick_BellySlide_Loop"], tmp, "slide", list(range(1, 33)))
+    P["ss"] = render(R, acts["Chick_BellySlide_Start"], tmp, "slide", list(range(1, 29)))
+    P["sl"] = render(R, acts["Chick_BellySlide_Loop"], tmp, "slide", list(range(1, SLIDE_N)))
     P["se"] = render(R, acts["Chick_BellySlide_End"], tmp, "slide", list(range(1, 29)))
     gif(P["idle"], os.path.join(a.out, "Pebble_Chick_Idle.gif"), 15)
     gif(P["waddle"], os.path.join(a.out, "Pebble_Chick_Waddle.gif"), 30)
     gif(P["js"] + P["jl"] + P["jd"], os.path.join(a.out, "Pebble_Chick_Jump.gif"), 30)
-    gif(P["ss"] + P["sl"] + P["sl"] + P["se"], os.path.join(a.out, "Pebble_Chick_BellySlide.gif"), 30)
+    gif(P["ss"] + P["sl"] + P["se"], os.path.join(a.out, "Pebble_Chick_BellySlide.gif"), 30)
+    # lean variants for steering, seen from the front
+    from PIL import Image as _I
+    lean_paths = []
+    for nm in ("Chick_BellySlide_Loop_LeanRight", "Chick_BellySlide_Loop", "Chick_BellySlide_Loop_LeanLeft"):
+        R.rig.animation_data.action = acts[nm]
+        if hasattr(acts[nm], "slots") and acts[nm].slots: R.rig.animation_data.action_slot = acts[nm].slots[0]
+        aim(sc.camera, (0, -520, 90), (0, 0, 50), 230); sc.frame_set(40)
+        fp = os.path.join(tmp, nm + "_front.png"); sc.render.filepath = fp; bpy.ops.render.render(write_still=True); lean_paths.append(fp)
+    li = [_I.open(q).convert("RGB") for q in lean_paths]; lw = li[0].width
+    lsheet = _I.new("RGB", (lw * 3, lw)); [lsheet.paste(im, (i * lw, 0)) for i, im in enumerate(li)]
+    lsheet.save(os.path.join(a.out, "Preview_SlideLean.png"))
     from PIL import Image
-    picks = [P["idle"][0], P["waddle"][9], P["js"][4], P["jl"][0], P["jd"][5], P["ss"][9], P["sl"][8], P["se"][12]]
+    picks = [P["idle"][0], P["waddle"][9], P["js"][4], P["jl"][0], P["jd"][5], P["ss"][10], P["sl"][30], P["se"][12]]
     ims = [Image.open(p).convert("RGB") for p in picks]; w = ims[0].width
     sheet = Image.new("RGB", (w * 4, w * 2))
     for i, im in enumerate(ims): sheet.paste(im, ((i % 4) * w, (i // 4) * w))

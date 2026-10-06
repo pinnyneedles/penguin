@@ -3,8 +3,8 @@
   "waddle_speed_cm_s": 23.25,
   "lie_pelvis_offset_cm": [
     0,
-    58.712848534072954,
-    21.074832916259766
+    59.26595744465872,
+    15.599761962890625
   ],
   "clips": {
     "Chick_Idle": {
@@ -44,22 +44,50 @@
       "min_z_feet": -0.0
     },
     "Chick_BellySlide_Start": {
-      "frames": 24,
-      "min_z": -0.0,
-      "min_z_body": -0.0,
-      "min_z_feet": -0.0
+      "frames": 28,
+      "min_z": -1.0,
+      "min_z_body": -1.0,
+      "min_z_feet": 0.0
     },
     "Chick_BellySlide_Loop": {
-      "frames": 33,
-      "min_z": -0.0,
-      "min_z_body": -0.0,
+      "frames": 65,
+      "min_z": -1.0,
+      "min_z_body": -1.0,
+      "min_z_feet": 0.4
+    },
+    "Chick_BellySlide_Loop_LeanLeft": {
+      "frames": 65,
+      "min_z": -1.0,
+      "min_z_body": -1.0,
+      "min_z_feet": 0.4
+    },
+    "Chick_BellySlide_Loop_LeanRight": {
+      "frames": 65,
+      "min_z": -1.0,
+      "min_z_body": -1.0,
       "min_z_feet": 0.4
     },
     "Chick_BellySlide_End": {
       "frames": 28,
-      "min_z": -0.0,
-      "min_z_body": -0.0,
-      "min_z_feet": 0.0
+      "min_z": -1.0,
+      "min_z_body": -1.0,
+      "min_z_feet": -0.0
+    }
+  },
+  "events": {
+    "BellySlide_Loop": {
+      "push_L": 10,
+      "push_R": 20
+    },
+    "BellySlide_Start": {
+      "belly_impact": 17
+    },
+    "Jump_Land": {
+      "feet_plant": 3
+    },
+    "Waddle": {
+      "step_L": 1,
+      "step_R": 17
     }
   }
 }

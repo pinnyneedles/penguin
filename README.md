@@ -93,13 +93,14 @@ modelled from a reference photo of a real chick:
 | File | What it is |
 |---|---|
 | `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, texture embedded. |
-| `AN_Pebble_Chick_*.fbx` | Nine clips at 30 fps, skeleton only: Idle, Waddle, Waddle_RootMotion, Jump_Start, Jump_Loop, Jump_Land, BellySlide_Start, BellySlide_Loop, BellySlide_End. See the animation table below. |
+| `AN_Pebble_Chick_*.fbx` | Eleven clips at 30 fps, skeleton only: Idle, Waddle, Waddle_RootMotion, Jump_Start, Jump_Loop, Jump_Land, BellySlide_Start, BellySlide_Loop, BellySlide_Loop_LeanLeft, BellySlide_Loop_LeanRight, BellySlide_End. See the animation table below. |
 | `T_Chick_Body_BaseColor.png` | Base colour for the down (sRGB). |
-| `Pebble_Chick.blend`, `Pebble_Chick_Anims.blend` | Editable scenes. The second one holds all nine clips as actions. |
-| `Preview_*.png`, `Pebble_Chick_*.gif` | Renders. `Preview_Animations.png` shows a key pose from each clip. The GIFs show Idle, Waddle, the jump chain and the belly-slide chain. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
+| `Pebble_Chick.blend`, `Pebble_Chick_Anims.blend` | Editable scenes. The second one holds all eleven clips as actions. |
+| `Preview_*.png`, `Pebble_Chick_*.gif` | Renders. `Preview_Animations.png` shows a key pose from each clip. The GIFs show Idle, Waddle, the jump chain and the belly-slide chain. `Pebble_Chick_BellySlide_Travel.gif` shows the slide moving over snow, and `Preview_SlideLean.png` shows the steering leans. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
 | `tools/chick_geometry.py` | All chick shapes: profile, tuft field, texture, bill, feet, flippers. Pure numpy. |
 | `tools/build_pebble_chick.py` | Builds the Blender scene and rig, exports the skeletal mesh and renders previews, using `chick_geometry.py`. Pass `--no-previews` to skip the renders. |
 | `tools/make_chick_anims.py` | Authors the nine clips, exports one FBX per clip and renders the GIFs. |
+| `tools/render_chick_slide_travel.py` | Renders the belly-slide chain travelling over snow with a following camera. |
 | `tools/verify_chick_anims.py` | Checks loop seams, clip-to-clip pose matches, planted-foot slip and the FBX round trip, and writes `anim_validation.json`. |
 | `tools/render_chick_closeups.py` | Renders fixed close-ups of the eye, bill and feet from a built `.blend`, for comparing versions. |
 
@@ -123,8 +124,9 @@ first frame, so they chain without pops.
 | Jump_Start | 10 | No | Crouch and launch. |
 | Jump_Loop | 25 | Yes | Airborne, flippers flapping. Height comes from Character Movement. |
 | Jump_Land | 18 | No | Feet plant on frame 3, squash, settle to rest. |
-| BellySlide_Start | 24 | No | Crouch, lunge, flop onto the belly. |
-| BellySlide_Loop | 33 | Yes | Tobogganing: head up, flippers out, feet trailing and kicking. |
+| BellySlide_Start | 28 | No | Crouch, lunge, flop onto the belly, head follow-through. |
+| BellySlide_Loop | 65 (2.13 s) | Yes | Push and glide on a level belly. The body rocks after each push and the head sways with it a few frames late. |
+| BellySlide_Loop_LeanLeft, _LeanRight | 65 | Yes | The same loop banked into a turn, for a steering Blend Space. |
 | BellySlide_End | 28 | No | Push up with the flippers and stand. |
 
 ![animations](pebble/Pebble_Chick/Preview_Animations.png)
@@ -133,6 +135,13 @@ Compared with the earlier clips, the waddle's planted feet no longer slide. They
 sideways and 1.3 cm front to back per step, and they now measure 0.0 cm. The 1-second idle became a 3-second
 loop with more life. The jump test, which had its height baked into the pelvis, became separate start, loop
 and land clips for gameplay.
+
+The belly slide was refined for gameplay. The body now lies level with the lower belly on the snow
+instead of the chest, and the rear sits 9 cm lower. The loop pushes with each foot and then glides. The
+body rocks about 8 degrees after each push, and the head sways about 11 degrees, trailing 4 frames
+behind like a real neck. Lean-left and lean-right versions let a Blend Space bank the chick into turns.
+
+![slide](pebble/Pebble_Chick/Pebble_Chick_BellySlide_Travel.gif)
 
 **Second iteration (eyes, bill, feet).** Each part was changed only if it clearly beat the previous
 version in blind A/B review. Three independent reviewers saw randomised left and right renders next to the
@@ -153,4 +162,5 @@ pip install bpy numpy scipy pillow
 python3 tools/build_pebble_chick.py --out pebble/Pebble_Chick
 python3 tools/make_chick_anims.py --blend pebble/Pebble_Chick/Pebble_Chick.blend --out pebble/Pebble_Chick
 python3 tools/verify_chick_anims.py pebble/Pebble_Chick
+python3 tools/render_chick_slide_travel.py pebble/Pebble_Chick
 ```
