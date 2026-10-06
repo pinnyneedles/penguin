@@ -42,6 +42,30 @@ CTRL = np.array([
 ])
 
 
+# Iteration 3: taller, straighter column like a real chick, shoulders that flow into the head
+# (no neck pinch), and a hem raised so the short grey legs show above the feet.
+CTRL_V3 = np.array([
+    (0.170, 0.000, 0.000, -0.015),
+    (0.178, 0.150, 0.140, -0.015),
+    (0.200, 0.292, 0.270, -0.020),
+    (0.250, 0.366, 0.336, -0.025),
+    (0.320, 0.398, 0.362, -0.030),
+    (0.420, 0.406, 0.368, -0.033),
+    (0.560, 0.394, 0.358, -0.030),
+    (0.720, 0.365, 0.333, -0.025),
+    (0.860, 0.325, 0.300, -0.020),
+    (0.980, 0.282, 0.265, -0.018),
+    (1.080, 0.245, 0.236, -0.022),
+    (1.160, 0.226, 0.226, -0.032),
+    (1.240, 0.224, 0.240, -0.045),
+    (1.330, 0.214, 0.236, -0.050),
+    (1.410, 0.184, 0.202, -0.046),
+    (1.470, 0.130, 0.145, -0.042),
+    (1.505, 0.065, 0.073, -0.040),
+    (1.518, 0.000, 0.000, -0.040),
+])
+
+
 def smoothstep(x):
     x = np.clip(x, 0.0, 1.0)
     return x * x * (3 - 2 * x)
@@ -93,14 +117,22 @@ def tuft_size(z):
     return W, L
 
 
+def fine_tuft_size(z):
+    """Small down clumps for the normal map and texture (m)."""
+    b = smoothstep((np.asarray(z) - 1.0) / 0.16)
+    return 0.040 * (1 - b) + 0.022 * b, 0.065 * (1 - b) + 0.036 * b
+
+
 class TuftField:
-    def __init__(self, prof: Profile, seed=11):
+    def __init__(self, prof: Profile, seed=11, size_fn=None, soft=False):
+        size_fn = size_fn or tuft_size
+        self.soft = soft
         rng = np.random.default_rng(seed)
         rows = []
         t = 0.02
         while t < prof.T - 0.01:
             z, rx, ry, cy = prof.at(t)
-            W, L = tuft_size(z)
+            W, L = size_fn(z)
             r = (rx + ry) / 2
             n = max(3, int(round(TAU * r / (0.75 * W))))
             phase = rng.uniform(0, 1)
@@ -115,13 +147,14 @@ class TuftField:
         self.A = np.zeros((K, nmax)); self.TC = np.zeros((K, nmax)); self.AMP = np.zeros((K, nmax))
         for k, (_, n, _, ang, tc, amp) in enumerate(rows):
             self.A[k, :n] = ang; self.TC[k, :n] = tc; self.AMP[k, :n] = amp
-        W, L = tuft_size(prof.at(self.TC)[0])
+        W, L = size_fn(prof.at(self.TC)[0])
         jit = rng.uniform(0.78, 1.28, W.shape)
         self.W, self.L = W * jit, L * jit * rng.uniform(0.85, 1.2, W.shape)
         self.prof = prof
         self.count = int(self.N.sum())
 
-    def __call__(self, a, t, p=6.0):
+    def __call__(self, a, t, p=None):
+        p = p or (3.5 if self.soft else 6.0)
         a = np.asarray(a, dtype=float); t = np.asarray(t, dtype=float)
         z, rx, ry, cy = self.prof.at(t)
         r = (rx + ry) / 2
@@ -138,8 +171,12 @@ class TuftField:
                 dv = t - self.TC[k, i]
                 x = du / (self.W[k, i] / 2); y = dv / (self.L[k, i] / 2)
                 yy = np.clip(y, -1, 1)
-                wp = np.sqrt(np.clip(1 - yy ** 2, 0, 1)) * (1 - 0.35 * np.clip(-yy, 0, 1)) + 1e-4
-                thick = 0.2 + 0.8 * ((1 - yy) / 2) ** 0.8          # thickest toward the hanging tip
+                if self.soft:          # rounded, fluffier clumps
+                    wp = np.sqrt(np.clip(1 - yy ** 2, 0, 1)) * (1 - 0.15 * np.clip(-yy, 0, 1)) + 1e-4
+                    thick = 0.40 + 0.60 * ((1 - yy) / 2) ** 1.2
+                else:                  # pointed shingles
+                    wp = np.sqrt(np.clip(1 - yy ** 2, 0, 1)) * (1 - 0.35 * np.clip(-yy, 0, 1)) + 1e-4
+                    thick = 0.2 + 0.8 * ((1 - yy) / 2) ** 0.8          # thickest toward the hanging tip
                 h = thick * np.sqrt(np.clip(1 - (x / wp) ** 2, 0, 1))
                 h = np.where(np.abs(y) < 1, h, 0.0) * self.AMP[k, i]
                 acc += h ** p
@@ -162,7 +199,7 @@ def anchors(prof: Profile):
     return bill_surface, eyes
 
 
-def displacement_amp(prof: Profile, P, z):
+def displacement_amp(prof: Profile, P, z, scale=1.0):
     """Down depth in metres: shaggy at the hem, full on the body, short on the head,
     almost bare around the bill base and eyes."""
     bill, eyes = anchors(prof)
@@ -174,7 +211,7 @@ def displacement_amp(prof: Profile, P, z):
     for E, _ in eyes.values():
         de = np.linalg.norm(P - E, axis=-1)
         A *= 0.25 + 0.75 * smoothstep((de - 0.035) / 0.05)
-    return A
+    return A * scale
 
 
 def ring_ts(prof: Profile, body_step=0.022, head_step=0.013):
@@ -185,7 +222,7 @@ def ring_ts(prof: Profile, body_step=0.022, head_step=0.013):
     return np.interp(np.linspace(0, w[-1], n + 1), w, prof.t)
 
 
-def body_mesh(prof: Profile, field: TuftField, seg=128):
+def body_mesh(prof: Profile, field: TuftField, seg=128, amp_scale=1.0):
     """Returns verts (m), faces, per-face UV lists, and the raw field values."""
     ts = ring_ts(prof)
     inner = ts[1:-1]
@@ -194,7 +231,7 @@ def body_mesh(prof: Profile, field: TuftField, seg=128):
     P = prof.point(AA, TT)
     Nn = prof.normal(AA, TT)
     F = field(AA, TT)
-    A = displacement_amp(prof, P, P[..., 2])
+    A = displacement_amp(prof, P, P[..., 2], amp_scale)
     Pd = P + Nn * (A * F)[..., None]
     verts = [tuple(v) for v in Pd.reshape(-1, 3)]
     bottom = len(verts); verts.append(tuple(prof.point(0.0, 0.0)))
@@ -249,6 +286,81 @@ def body_texture(prof: Profile, field: TuftField, N=1024, seed=7):
         de = np.linalg.norm(P - E, axis=-1)
         rgb *= (1 - .45 * (1 - smoothstep((de - .03) / .03)))[..., None]   # darker ring round the eye
     return np.clip(rgb, 0, 1)
+
+
+def body_texture_v3(prof: Profile, field: TuftField, fine: TuftField, N=1024, seed=7):
+    """Iteration 3 surface: lighter, even cinnamon-tan down with soft lighter tips, plus a
+    tangent-space normal map of fine down clumps and strands.
+    Returns (base colour linear RGB, normal map OpenGL/Blender, normal map DirectX/Unreal), each (N, N, 3)."""
+    rng = np.random.default_rng(seed)
+    v = (np.arange(N) + 0.5) / N
+    UU, VV = np.meshgrid(v, v)
+    a = (UU - 0.5) * TAU
+    t = VV * prof.T
+    P = prof.point(a, t)
+    z = P[..., 2]
+    F = field(a, t); Fn = np.clip(F / np.percentile(F, 99), 0, 1)
+    G = fine(a, t); Gn = np.clip(G / np.percentile(G, 99), 0, 1)
+
+    def octave(nx, ny, amp):
+        g = rng.standard_normal((ny, nx))
+        return amp * zoom(g, (N / ny, N / nx), order=3, mode="grid-wrap")
+    strands = octave(1024, 96, .45) + octave(512, 48, .35) + octave(256, 24, .2)      # fibres along the down
+    blotch = octave(8, 6, .5) + octave(24, 16, .3)
+    front = (np.cos(a) + 1) / 2
+    dark = np.array([.175, .108, .058]); light = np.array([.285, .185, .100]); tip = np.array([.42, .30, .18])
+    k = np.clip(0.35 + 0.45 * front - 0.15 * smoothstep((z - 1.15) / .3) + .06 * blotch, 0, 1)
+    rgb = dark * (1 - k[..., None]) + light * k[..., None]
+    rgb = rgb * (0.80 + 0.25 * Fn ** 0.8)[..., None]                       # gentle shading between clumps
+    tipm = np.clip(Gn ** 3 * 0.55 + 0.10 * np.clip(strands, 0, 2), 0, 1)
+    rgb = rgb * (1 - tipm[..., None]) + tip * tipm[..., None]               # light fluffy tips
+    rgb = rgb * (1 + .10 * np.clip(strands, -1.5, 1.5))[..., None]
+    rgb = rgb * (1 - .10 * smoothstep((.30 - z) / .12))[..., None]          # slightly dusty hem
+    bill, eyes = anchors(prof)
+    db = np.linalg.norm(P - bill, axis=-1)
+    fm = 0.75 * (1 - smoothstep((db - 0.05) / 0.07))
+    skin = np.array([.10, .088, .080]) * (1 + .08 * np.clip(strands, -1.5, 1.5))[..., None]
+    rgb = rgb * (1 - fm[..., None]) + skin * fm[..., None]
+    for E, _ in eyes.values():
+        de = np.linalg.norm(P - E, axis=-1)
+        rgb *= (1 - .40 * (1 - smoothstep((de - .03) / .03)))[..., None]
+    rgb = np.clip(rgb, 0, 1)
+    # height (cm) of fine clumps and fibres; flattened near the bill and eyes like the geometry
+    face = np.clip(1 - fm / 0.75, 0, 1)
+    H = (0.55 * Gn + 0.12 * np.clip(strands, -2, 2)) * face
+    zz, rx, ry, cy = prof.at(t)
+    r = np.maximum((rx + ry) / 2, 0.02)
+    du = TAU * r / N * 100.0                       # texel width in cm around the body
+    dv = prof.T / N * 100.0                        # texel height in cm along the body
+    hx = (np.roll(H, -1, axis=1) - np.roll(H, 1, axis=1)) / (2 * du)
+    hy = (np.roll(H, -1, axis=0) - np.roll(H, 1, axis=0)) / (2 * dv)
+    hy[0] = hy[1]; hy[-1] = hy[-2]
+    s = 0.6
+    n = np.stack([-s * hx, -s * hy, np.ones_like(H)], -1)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+    gl = n * 0.5 + 0.5
+    dx = gl.copy(); dx[..., 1] = 1 - dx[..., 1]
+    return rgb, gl, dx
+
+
+def tarsus(side, k=8, n=12):
+    """Short, thick grey leg from the foot up into the down."""
+    s = np.linspace(0, 1, k)
+    C = np.stack([np.full(k, side * 0.226), 0.010 - 0.015 * s, 0.050 + 0.27 * s], 1)
+    r = 0.050 + 0.016 * s
+    return loft(C, r, r * 1.05, n, cap_start=True)
+
+
+def flipper_centres_v3(prof: Profile, side, k=10):
+    """Longer flipper that hangs close along the side, covered in the same down."""
+    zs = np.linspace(0.985, 0.32, k)
+    ts = prof.t_at_z(zs)
+    z, rx, ry, cy = prof.at(ts)
+    off = 0.010 + 0.028 * ((0.985 - zs) / 0.665) ** 1.6
+    x = side * (rx + off)
+    y = cy + 0.030 + 0.030 * (0.985 - zs) / 0.665
+    widths = np.array([.034, .062, .078, .084, .084, .080, .072, .058, .036, .006])
+    return np.stack([x, y, zs], 1), widths
 
 
 # ---------------------------------------------------------------------------
