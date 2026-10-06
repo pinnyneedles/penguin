@@ -1,0 +1,264 @@
+{
+  "source": {
+    "loop_seams_cm_and_matrix": {
+      "Chick_Idle": [
+        0.0,
+        0.0
+      ],
+      "Chick_Waddle": [
+        0.0,
+        0.0
+      ],
+      "Chick_Jump_Loop": [
+        0.0,
+        0.0
+      ],
+      "Chick_BellySlide_Loop": [
+        0.0,
+        0.0
+      ],
+      "Chick_Waddle_RootMotion (relative to root)": [
+        0.0,
+        0.0
+      ]
+    },
+    "chain_matches_cm_and_matrix": {
+      "Idle first == rest": [
+        0.0,
+        0.0
+      ],
+      "Jump_Start first == rest": [
+        0.0,
+        0.0
+      ],
+      "Jump_Start last == Jump_Loop first": [
+        0.0,
+        0.0
+      ],
+      "Jump_Land first == Jump_Loop first": [
+        0.0,
+        0.0
+      ],
+      "Jump_Land last == rest": [
+        0.0,
+        0.0
+      ],
+      "BellySlide_Start first == rest": [
+        0.0,
+        0.0
+      ],
+      "BellySlide_Start last == BellySlide_Loop first": [
+        0.0,
+        0.0
+      ],
+      "BellySlide_End first == BellySlide_Loop first": [
+        0.0,
+        0.0
+      ],
+      "BellySlide_End last == rest": [
+        0.0,
+        0.0
+      ]
+    },
+    "waddle_planted_foot_slip_cm": {
+      "L": {
+        "planted_frames": "1-18",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "rotation": 0.0
+      },
+      "R": {
+        "planted_frames": "1-2",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "rotation": 0.0
+      }
+    },
+    "waddle_root_motion_cm_per_cycle": 24.8
+  },
+  "fbx": {
+    "Chick_Idle": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          91.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_Waddle": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          33.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0001
+    },
+    "Chick_Waddle_RootMotion": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          33.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0001
+    },
+    "Chick_Jump_Start": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          10.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_Jump_Loop": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          25.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_Jump_Land": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          18.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_BellySlide_Start": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          24.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_BellySlide_Loop": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          33.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    },
+    "Chick_BellySlide_End": {
+      "fbx_version": 7400,
+      "armature_node": [
+        [
+          "Armature",
+          "Null"
+        ]
+      ],
+      "bones": 16,
+      "meshes": 0,
+      "frames": [
+        [
+          1.0,
+          28.0
+        ]
+      ],
+      "max_bone_head_error_cm": 0.0
+    }
+  },
+  "fbx_bone_names_identical_across_clips": true,
+  "bone_names": [
+    "body",
+    "crest",
+    "flipper.L",
+    "flipper.R",
+    "flipper_tip.L",
+    "flipper_tip.R",
+    "foot.L",
+    "foot.R",
+    "head",
+    "leg.L",
+    "leg.R",
+    "pelvis",
+    "root",
+    "tail",
+    "toe.L",
+    "toe.R"
+  ]
+}

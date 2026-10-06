@@ -1,0 +1,82 @@
+{
+  "AN_Pebble_Idle.fbx": {
+    "bytes": 1800684,
+    "sha256": "b475c07205d6e8872fbf7f78c4e8a59ecd2fc6517df5865f221c6de7389042dc"
+  },
+  "AN_Pebble_Jump.fbx": {
+    "bytes": 1806620,
+    "sha256": "336a4a861b66fedb8fa340d1df267773121a69cfb5880716b620fc3c11ffd3ef"
+  },
+  "build_pebble.py": {
+    "bytes": 17102,
+    "sha256": "b4ded9235892c9f7df220adffc1e21d42ccdf700be99eaee308fe233490e150c"
+  },
+  "Pebble_Jump.gif": {
+    "bytes": 1440972,
+    "sha256": "83c2794edf1a4a90fcc1f4facfbe75f0b4ee19cd9a631e207ad357fabfc4d547"
+  },
+  "Pebble_Penguin.blend": {
+    "bytes": 855430,
+    "sha256": "f2361bdf141b046bdfab1d851510985c9e2fb28eb60f1e0f38e7715b7c90d0bf"
+  },
+  "Pebble_Preview.jpg": {
+    "bytes": 242453,
+    "sha256": "577d48bddcc0079beb702ef0af0dcc0d6604d76b533d1b39059ea050038cac29"
+  },
+  "Preview_Back.png": {
+    "bytes": 1257230,
+    "sha256": "25a4c012516d7f2a8632b0b57a3fc70303b693b6cb895cd15008e42cdf4991f6"
+  },
+  "Preview_Crouch.png": {
+    "bytes": 706725,
+    "sha256": "500f4dea640d2116387bd71da5600dd40be86326e3e2bca9c817fdebca4658d5"
+  },
+  "preview_extras.py": {
+    "bytes": 1776,
+    "sha256": "186fda4f1a093ad9a46e9347490d739465336b127eab2caf8e059cbc9026dcec"
+  },
+  "Preview_Front.png": {
+    "bytes": 1284556,
+    "sha256": "db65bdbef72040f355fe0c1c857a1467ee6f8e1d67e99821346203299a668fe3"
+  },
+  "Preview_Hero.png": {
+    "bytes": 1288813,
+    "sha256": "5313ced0fdb631bb947244120a0acbd29b644592af06a98703011375cfbfc3ed"
+  },
+  "Preview_Jump.png": {
+    "bytes": 1261743,
+    "sha256": "36bcb1e62fdf2ef380f40e21c0a806a568d2183fbb104e3a118f9bd46bb37126"
+  },
+  "README_Unreal.txt": {
+    "bytes": 6014,
+    "sha256": "888a1a2f408e78fa59452dd0b4c3de5b8ee28b66b51b61442caf11f83974c295"
+  },
+  "SK_Pebble.fbx": {
+    "bytes": 1669196,
+    "sha256": "3f1917a9b6aec6129ec265461f118dfcbdb87e4951d9fb2d6dae58e9fbbdae6a"
+  },
+  "source_stats.json": {
+    "bytes": 466,
+    "sha256": "4b5128d6bc23a3ad85cc9abe9eca1c6316972f34dde601ca91293e2827094919"
+  },
+  "T_Pebble_Body_BaseColor.png": {
+    "bytes": 50315,
+    "sha256": "213387b2b3a1b3342ec62d59b1a90dcc39391259c2a1c80554864b1af370df8f"
+  },
+  "topology_audit.json": {
+    "bytes": 293,
+    "sha256": "4193f0fc45ad666819b6578666bdd388fc7ce881be9061932f4f440f2eaa6dc3"
+  },
+  "validate_pebble.py": {
+    "bytes": 4315,
+    "sha256": "63ff5e45cdcffb03d546c67b86de48865fc69c587cc6bb07c2e6d7647cabb34d"
+  },
+  "Validation_FBX_Reimport.blend": {
+    "bytes": 866230,
+    "sha256": "434b2a618acc96c89b0302bb07b5676d6d798155b755499c1b87d110c3a38d40"
+  },
+  "validation_report.json": {
+    "bytes": 7850,
+    "sha256": "e17a9683cdc46dedc754373844b882bd9db93af204042a0554631c33f7b82892"
+  }
+}

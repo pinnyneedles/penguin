@@ -1,0 +1,19 @@
+{
+  "vertices": 24018,
+  "faces": 24254,
+  "triangles": 47908,
+  "bones": 16,
+  "material_slots": 8,
+  "uv_layers": 1,
+  "max_weight_influences": 2,
+  "invalid_weight_vertices": 0,
+  "dimensions_cm": [
+    107.63783264160156,
+    103.08486938476562,
+    152.0686798095703
+  ],
+  "animations": "see anim_stats.json (authored by tools/make_chick_anims.py)",
+  "variant": "king penguin chick",
+  "fps": 30,
+  "blender_version": "5.0.1"
+}

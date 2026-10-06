@@ -1,0 +1,27 @@
+{
+  "vertices": 17892,
+  "faces": 18208,
+  "triangles": 35680,
+  "bones": 16,
+  "material_slots": 8,
+  "uv_layers": 1,
+  "max_weight_influences": 2,
+  "invalid_weight_vertices": 0,
+  "dimensions_cm": [
+    130.66246032714844,
+    100.40229797363281,
+    167.26719665527344
+  ],
+  "animations": {
+    "Pebble_Idle": [
+      1,
+      31
+    ],
+    "Pebble_Jump_Test": [
+      1,
+      48
+    ]
+  },
+  "fps": 30,
+  "blender_version": "5.1.1"
+}

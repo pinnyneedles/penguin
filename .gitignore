@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.blend1
+_anim_frames/
+_pose_test.png

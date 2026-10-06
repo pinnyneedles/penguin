@@ -1,0 +1,39 @@
+newmtl PenguinBody
+Kd 0.0941 0.1020 0.1255
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+d 1
+illum 2
+
+newmtl PenguinBelly
+Kd 0.9608 0.9608 0.9412
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+d 1
+illum 2
+
+newmtl PenguinBeak
+Kd 0.9412 0.5882 0.1569
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+d 1
+illum 2
+
+newmtl PenguinEye
+Kd 0.9804 0.9804 0.9804
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+d 1
+illum 2
+
+newmtl PenguinPupil
+Kd 0.0392 0.0392 0.0471
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+d 1
+illum 2
