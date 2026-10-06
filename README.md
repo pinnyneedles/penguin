@@ -93,20 +93,46 @@ modelled from a reference photo of a real chick:
 | File | What it is |
 |---|---|
 | `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, texture embedded. |
-| `AN_Pebble_Chick_Idle.fbx`, `AN_Pebble_Chick_Jump.fbx`, `AN_Pebble_Chick_Waddle.fbx` | Idle (31 frames), jump test (48 frames) and waddle loop (33 frames) at 30 fps, in place. |
+| `AN_Pebble_Chick_*.fbx` | Nine clips at 30 fps, skeleton only: Idle, Waddle, Waddle_RootMotion, Jump_Start, Jump_Loop, Jump_Land, BellySlide_Start, BellySlide_Loop, BellySlide_End. See the animation table below. |
 | `T_Chick_Body_BaseColor.png` | Base colour for the down (sRGB). |
-| `Pebble_Chick.blend`, `Pebble_Chick_Waddle.blend` | Editable scenes. The second one has the waddle action added. |
-| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
+| `Pebble_Chick.blend`, `Pebble_Chick_Anims.blend` | Editable scenes. The second one holds all nine clips as actions. |
+| `Preview_*.png`, `Pebble_Chick_*.gif` | Renders. `Preview_Animations.png` shows a key pose from each clip. The GIFs show Idle, Waddle, the jump chain and the belly-slide chain. `Preview_Sheet.png` shows hero, front, side and back views. `Compare_Eye_Bill.png` shows the eye and bill before and after the second iteration. |
 | `tools/chick_geometry.py` | All chick shapes: profile, tuft field, texture, bill, feet, flippers. Pure numpy. |
-| `tools/build_pebble_chick.py` | Builds the Blender scene, rig, clips, exports and previews using `chick_geometry.py`. Pass `--no-previews` to skip the renders. |
+| `tools/build_pebble_chick.py` | Builds the Blender scene and rig, exports the skeletal mesh and renders previews, using `chick_geometry.py`. Pass `--no-previews` to skip the renders. |
+| `tools/make_chick_anims.py` | Authors the nine clips, exports one FBX per clip and renders the GIFs. |
+| `tools/verify_chick_anims.py` | Checks loop seams, clip-to-clip pose matches, planted-foot slip and the FBX round trip, and writes `anim_validation.json`. |
 | `tools/render_chick_closeups.py` | Renders fixed close-ups of the eye, bill and feet from a built `.blend`, for comparing versions. |
 
 Full Unreal import notes for the chick, including materials, animation details and how to add hair strands,
 are in `pebble/Pebble_Chick/README_Unreal.txt`. In short, import the skeletal mesh
 first with no skeleton assigned. Then import each animation FBX with Import Mesh off and the new skeleton
-selected. Bone names match Pebble's, so you can also import the chick mesh onto Pebble's skeleton asset and
-share one Animation Blueprint. At 46k triangles it is fine for a hero character, but generate LODs in the
+selected. The chick's FBX files name the armature object "Armature", so Unreal does not add an extra bone above
+`root` and root motion works. The blue Pebble's package files still use the old name, so they cannot share the
+chick's skeleton in Unreal until they are re-exported the same way. At 48k triangles it is fine for a hero character, but generate LODs in the
 Skeletal Mesh editor for crowds or distant views.
+
+**Animations for Unreal.** All clips are 30 fps and in place except the root-motion waddle. Loops repeat
+their first pose on the last frame, and every one-shot clip starts or ends on the rest pose or on its loop's
+first frame, so they chain without pops.
+
+| Clip | Frames | Loop | What it does |
+|---|---|---|---|
+| Idle | 91 (3.0 s) | Yes | Breathing, weight shift, a slow glance, feet planted. |
+| Waddle | 33 (1.07 s) | Yes | Walk cycle. Planted feet move at a constant 23.25 cm/s, so set walk speed to match. |
+| Waddle_RootMotion | 33 | Yes | Same pose, with the root bone carrying 24.8 cm per cycle. |
+| Jump_Start | 10 | No | Crouch and launch. |
+| Jump_Loop | 25 | Yes | Airborne, flippers flapping. Height comes from Character Movement. |
+| Jump_Land | 18 | No | Feet plant on frame 3, squash, settle to rest. |
+| BellySlide_Start | 24 | No | Crouch, lunge, flop onto the belly. |
+| BellySlide_Loop | 33 | Yes | Tobogganing: head up, flippers out, feet trailing and kicking. |
+| BellySlide_End | 28 | No | Push up with the flippers and stand. |
+
+![animations](pebble/Pebble_Chick/Preview_Animations.png)
+
+Compared with the earlier clips, the waddle's planted feet no longer slide. They previously slid about 2.5 cm
+sideways and 1.3 cm front to back per step, and they now measure 0.0 cm. The 1-second idle became a 3-second
+loop with more life. The jump test, which had its height baked into the pelvis, became separate start, loop
+and land clips for gameplay.
 
 **Second iteration (eyes, bill, feet).** Each part was changed only if it clearly beat the previous
 version in blind A/B review. Three independent reviewers saw randomised left and right renders next to the
@@ -125,5 +151,6 @@ To tweak the shape, edit `tools/chick_geometry.py`. `CTRL` is the body profile. 
 ```
 pip install bpy numpy scipy pillow
 python3 tools/build_pebble_chick.py --out pebble/Pebble_Chick
-python3 tools/make_pebble_waddle.py --package pebble/Pebble_Chick --blend Pebble_Chick.blend --prefix Pebble_Chick --out pebble/Pebble_Chick
+python3 tools/make_chick_anims.py --blend pebble/Pebble_Chick/Pebble_Chick.blend --out pebble/Pebble_Chick
+python3 tools/verify_chick_anims.py pebble/Pebble_Chick
 ```

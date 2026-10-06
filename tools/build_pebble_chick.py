@@ -225,9 +225,8 @@ def selection():
 def fbx(name,animated=False):
     selection()
     bpy.ops.export_scene.fbx(filepath=os.path.join(OUT,name),use_selection=True,object_types={'ARMATURE','MESH'},global_scale=1,apply_unit_scale=True,apply_scale_options='FBX_SCALE_UNITS',axis_forward='X',axis_up='Z',use_space_transform=True,bake_space_transform=False,add_leaf_bones=False,primary_bone_axis='Y',secondary_bone_axis='X',use_armature_deform_only=True,use_mesh_modifiers=True,mesh_smooth_type='FACE',use_tspace=True,bake_anim=animated,bake_anim_use_all_bones=True,bake_anim_use_nla_strips=False,bake_anim_use_all_actions=False,bake_anim_force_startend_keying=True,bake_anim_step=1,bake_anim_simplify_factor=0,path_mode='COPY',embed_textures=True)
-fbx('SK_Pebble_Chick.fbx')
-fbx('AN_Pebble_Chick_Jump.fbx',True)
-rig.animation_data.action=idle; scene.frame_end=31; scene.frame_set(1); fbx('AN_Pebble_Chick_Idle.fbx',True)
+rig.name='Armature'   # Unreal drops a root node named "Armature" instead of adding it as an extra bone
+fbx('SK_Pebble_Chick.fbx')   # animation clips are authored and exported by tools/make_chick_anims.py
 rig.animation_data.action=jump; scene.frame_end=48; scene.frame_set(1)
 selection()
 for area in (bpy.context.screen.areas if bpy.context.screen else []):
@@ -239,9 +238,9 @@ bad=[]; maxinf=0
 for v in char.data.vertices:
     total=sum(g.weight for g in v.groups); maxinf=max(maxinf,len(v.groups))
     if abs(total-1)>1e-4:bad.append(v.index)
-stats={'vertices':len(char.data.vertices),'faces':len(char.data.polygons),'triangles':len(char.data.loop_triangles),'bones':len(arm.bones),'material_slots':len(char.data.materials),'uv_layers':len(char.data.uv_layers),'max_weight_influences':maxinf,'invalid_weight_vertices':len(bad),'dimensions_cm':list(char.dimensions),'animations':{'Pebble_Idle':[1,31],'Pebble_Jump_Test':[1,48]},'variant':'king penguin chick','fps':30,'blender_version':bpy.app.version_string}
+stats={'vertices':len(char.data.vertices),'faces':len(char.data.polygons),'triangles':len(char.data.loop_triangles),'bones':len(arm.bones),'material_slots':len(char.data.materials),'uv_layers':len(char.data.uv_layers),'max_weight_influences':maxinf,'invalid_weight_vertices':len(bad),'dimensions_cm':list(char.dimensions),'animations':'see anim_stats.json (authored by tools/make_chick_anims.py)','variant':'king penguin chick','fps':30,'blender_version':bpy.app.version_string}
 open(os.path.join(OUT,'source_stats.json'),'w').write(json.dumps(stats,indent=2))
 print('CHICK_STATS',json.dumps(stats),flush=True)
-for name,frame,loc,target,scale in ([] if '--no-previews' in argv else [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Jump',18,(265,-470,250),(0,0,101),258),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215),('Preview_Side',1,(520,-30,120),(0,0,80),200)]):
+for name,frame,loc,target,scale in ([] if '--no-previews' in argv else [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215),('Preview_Side',1,(520,-30,120),(0,0,80),200)]):
     scene.frame_set(frame); cam.location=loc; track(cam,target); camdata.ortho_scale=scale; scene.render.filepath=os.path.join(OUT,name+'.png'); bpy.ops.render.render(write_still=True)
 print('CHICK_BUILD_COMPLETE',flush=True)

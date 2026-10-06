@@ -12,16 +12,7 @@
     103.08486938476562,
     152.0686798095703
   ],
-  "animations": {
-    "Pebble_Idle": [
-      1,
-      31
-    ],
-    "Pebble_Jump_Test": [
-      1,
-      48
-    ]
-  },
+  "animations": "see anim_stats.json (authored by tools/make_chick_anims.py)",
   "variant": "king penguin chick",
   "fps": 30,
   "blender_version": "5.0.1"
