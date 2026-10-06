@@ -1,16 +1,16 @@
 {
-  "vertices": 14226,
-  "faces": 14464,
-  "triangles": 28384,
+  "vertices": 23050,
+  "faces": 23278,
+  "triangles": 45972,
   "bones": 16,
-  "material_slots": 9,
+  "material_slots": 8,
   "uv_layers": 1,
   "max_weight_influences": 2,
   "invalid_weight_vertices": 0,
   "dimensions_cm": [
-    130.66246032714844,
-    122.0022964477539,
-    148.1610107421875
+    107.63783264160156,
+    100.57794189453125,
+    152.0686798095703
   ],
   "animations": {
     "Pebble_Idle": [

@@ -1,11 +1,14 @@
-# Brown king-penguin-chick restyle of the Pebble character: same skeleton, weights and
-# animation set, new proportions, bill, eyes, feet and a fluffy brown down texture.
+# Brown king-penguin-chick variant of the Pebble character: same skeleton, weights scheme and
+# animation set. Geometry (pear body, down tufts, bill, eyes, feet) comes from chick_geometry.py.
 # Run:  python3 tools/build_pebble_chick.py --out pebble/Pebble_Chick
 import bpy, math, os, json, sys
 import numpy as np
 from scipy.ndimage import zoom
 from mathutils import Vector
 from math import sin, cos, pi
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import chick_geometry as G
+PROF = G.Profile(); FIELD = G.TuftField(PROF)
 
 argv=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else sys.argv[1:]
 OUT=os.path.abspath(argv[argv.index('--out')+1]) if '--out' in argv else os.path.join(os.getcwd(),'pebble','Pebble_Chick')
@@ -28,14 +31,14 @@ def mat(name,color,rough=.45):
     return m
 def fluffy(m):
     bs=m.node_tree.nodes.get('Principled BSDF')
-    for k,v in [('Sheen Weight',.3),('Sheen Roughness',.7),('Sheen Tint',(.55,.36,.2,1))]:
+    for k,v in [('Sheen Weight',.15),('Sheen Roughness',.7),('Sheen Tint',(.35,.22,.12,1))]:
         if k in bs.inputs: bs.inputs[k].default_value=v
     return m
 navy=fluffy(mat('M_Chick_DownDark',(0.024,0.011,0.004),.85))      # flippers, tail
 charcoal=mat('M_Chick_Bill',(0.045,0.04,0.045),.5)              # upper bill
 billlow=mat('M_Chick_BillLower',(0.10,0.085,0.085),.5)
 orange=mat('M_Chick_Foot',(0.04,0.034,0.034),.65)               # feet and ankles
-sole=mat('M_Chick_Sole',(0.04,0.035,0.035),.7)
+sole=mat('M_Chick_Claw',(0.075,0.07,0.065),.35)
 cream=mat('M_Chick_Iris',(0.11,0.06,0.03),.3)                   # small dark eye
 black=mat('M_Chick_Pupil',(0.009,0.008,0.01),.19)
 white=mat('M_Chick_Glint',(1,.98,.9),.2)
@@ -44,25 +47,8 @@ skin=fluffy(mat('M_Chick_Body',(1,1,1),.8))
 def smooth(v): return max(0,min(1,v))**2*(3-2*max(0,min(1,v)))
 N=1024
 img=bpy.data.images.new('T_Chick_Body_BaseColor',width=N,height=N,alpha=False)
-iy,ix=np.mgrid[0:N,0:N].astype(np.float64)
-z=.2+1.3*(iy+.5)/N
-a=((ix+.5)/N-.5)*2*pi                      # 0 = front (-Y), +-pi = back seam
-front=(np.cos(a)+1)/2
-rng=np.random.default_rng(7)
-def octave(nx,ny,amp):
-    g=rng.standard_normal((ny,nx)); return amp*zoom(g,(N/ny,N/nx),order=3,mode='grid-wrap')
-fur=octave(6,4,.55)+octave(24,10,.35)+octave(96,24,.28)+octave(384,64,.2)+octave(1024,128,.12)   # vertical streaks
-fur=np.clip(fur,-1.6,1.6)
-dark=np.array([.13,.065,.028]); light=np.array([.34,.185,.085])
-t=np.clip(front**1.3*(1-.35*np.clip((z-1.15)/.3,0,1)),0,1)        # lighter chest, darker back and crown
-rgb=dark[None,None,:]*(1-t[...,None])+light[None,None,:]*t[...,None]
-rgb=rgb*(1+.22*fur[...,None])
-rgb*=1-.18*np.clip((.45-z)/.25,0,1)[...,None]                         # dusty toward the feet
-face=(a/.36)**2+((z-1.16)/.11)**2                                       # bare grey skin at the bill base
-fm=np.clip((1-face)/.35,0,1); fm=fm*fm*(3-2*fm)
-fm*=.75
-rgb=rgb*(1-fm[...,None])+np.array([.2,.17,.15])[None,None,:]*fm[...,None]*(1+.06*fur[...,None])
-pixels=np.concatenate([np.clip(rgb,0,1),np.ones((N,N,1))],axis=2).ravel().tolist()
+rgb=G.body_texture(PROF,FIELD,N=N)
+pixels=np.concatenate([rgb,np.ones((N,N,1))],axis=2).ravel().tolist()
 img.pixels.foreach_set(pixels); img.filepath_raw=os.path.join(OUT,'T_Chick_Body_BaseColor.png'); img.file_format='PNG'; img.save(); img.pack()
 tex=skin.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=img
 skin.node_tree.links.new(tex.outputs['Color'],skin.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
@@ -73,16 +59,20 @@ def weights(o,fn):
         for name,value in w.items():
             if value>1e-6:
                 g=o.vertex_groups.get(name) or o.vertex_groups.new(name=name); g.add([v.index],value,'REPLACE')
-def finish(o,m,fn,sub=0):
+DOWN_TEX=bpy.data.textures.new('Down lumps','CLOUDS'); DOWN_TEX.noise_scale=3.0; DOWN_TEX.noise_depth=2
+def finish(o,m,fn,sub=0,disp=0):
     move_collection(o,CHAR); o.data.materials.append(m)
     bpy.context.view_layer.objects.active=o
     if sub:
         mod=o.modifiers.new('Rounded surface','SUBSURF'); mod.levels=sub
         bpy.ops.object.modifier_apply(modifier=mod.name)
+    if disp:
+        mod=o.modifiers.new('Down','DISPLACE'); mod.texture=DOWN_TEX; mod.strength=disp; mod.mid_level=.5
+        bpy.ops.object.modifier_apply(modifier=mod.name)
     for p in o.data.polygons:p.use_smooth=True
     weights(o,fn); parts.append(o)
     return o
-def mesh(name,verts,faces,m,fn,sub=0,uvs=None):
+def mesh(name,verts,faces,m,fn,sub=0,uvs=None,disp=0):
     me=bpy.data.meshes.new(name); me.from_pydata([Vector(v)*100 for v in verts],[],faces); me.update()
     ob=bpy.data.objects.new(name,me); scene.collection.objects.link(ob)
     if uvs:
@@ -95,7 +85,7 @@ def mesh(name,verts,faces,m,fn,sub=0,uvs=None):
             for li in p.loop_indices:
                 v=me.vertices[me.loops[li].vertex_index].co/100
                 uv.data[li].uv=((v.x+1)/2,(v.z+.1)/2)
-    return finish(ob,m,fn,sub)
+    return finish(ob,m,fn,sub,disp)
 def rigid(b):return lambda p:{b:1}
 def ell(name,loc,scale,m,bone,rot=(0,0,0),seg=24,rings=16):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg,ring_count=rings,location=Vector(loc)*100)
@@ -107,64 +97,60 @@ def ell(name,loc,scale,m,bone,rot=(0,0,0),seg=24,rings=16):
 def body_w(p):
     h=smooth((p.z-.96)/.23); b=smooth((p.z-.38)/.38)
     return {'pelvis':(1-b)*(1-h),'body':b*(1-h),'head':h}
-profile=[(.21,.08,.075),(.245,.22,.19),(.30,.315,.267),(.39,.385,.315),(.50,.426,.352),(.63,.44,.367),(.76,.426,.35),(.88,.394,.327),(.97,.353,.30),(1.04,.334,.291),(1.12,.357,.307),(1.22,.376,.32),(1.32,.36,.305),(1.40,.307,.258),(1.455,.222,.183),(1.488,.10,.079),(1.50,.01,.01)]
-profile=[(z,rx*(1.07 if .28<z<.97 else .93 if z>=1.2 else 1),ry*(1.07 if .28<z<.97 else .93 if z>=1.2 else 1)) for z,rx,ry in profile]
-verts=[]; faces=[]; uvs=[]; seg=64
-for z,rx,ry in profile:
-    for j in range(seg):
-        a=-pi+j*2*pi/seg; verts.append((rx*sin(a),-ry*cos(a),z))
-for i in range(len(profile)-1):
-    for j in range(seg):
-        nj=(j+1)%seg; faces.append((i*seg+j,i*seg+nj,(i+1)*seg+nj,(i+1)*seg+j))
-        uvs.append([(j/seg,(profile[i][0]-.2)/1.3),((j+1)/seg,(profile[i][0]-.2)/1.3),((j+1)/seg,(profile[i+1][0]-.2)/1.3),(j/seg,(profile[i+1][0]-.2)/1.3)])
-faces+=[tuple(reversed(range(seg))),tuple((len(profile)-1)*seg+j for j in range(seg))]
-uvs += [[(.5,0)]*seg,[(.5,1)]*seg]
-body=mesh('Body • continuous head and torso',verts,faces,skin,body_w,1,uvs)
+# Pear-shaped body, neck and head as one continuous surface, displaced by real down tufts.
+verts,faces,uvs,info=G.body_mesh(PROF,FIELD)
+print('BODY',info,flush=True)
+body=mesh('Body • continuous head and torso, tufted down',verts,faces,skin,body_w,0,uvs)
 
-def leaf(name,centers,widths,thickness,m,fn,sub=1):
+def leaf(name,centers,widths,thickness,m,fn,sub=1,flat_x=False,disp=0):
     vs=[]; fs=[]; n=12
     for c,w in zip(centers,widths):
         for j in range(n):
-            a=2*pi*j/n; vs.append((c[0]+w*cos(a),c[1]+thickness*w*sin(a),c[2]))
+            a=2*pi*j/n
+            vs.append((c[0]+thickness*w*cos(a),c[1]+w*sin(a),c[2]) if flat_x else (c[0]+w*cos(a),c[1]+thickness*w*sin(a),c[2]))
     for i in range(len(centers)-1):
         for j in range(n): fs.append((i*n+j,i*n+(j+1)%n,(i+1)*n+(j+1)%n,(i+1)*n+j))
     fs.extend([tuple(reversed(range(n))),tuple((len(centers)-1)*n+j for j in range(n))])
-    return mesh(name,vs,fs,m,fn,sub)
+    return mesh(name,vs,fs,m,fn,sub,disp=disp)
 
+def torus(name,center,normal,major,minor,m,bone):
+    bpy.ops.mesh.primitive_torus_add(major_radius=major*100,minor_radius=minor*100,major_segments=28,minor_segments=8,
+        location=Vector(center)*100,rotation=Vector(normal).to_track_quat('Z','Y').to_euler())
+    o=bpy.context.object; o.name=name
+    bpy.ops.object.transform_apply(location=True,rotation=True,scale=True)
+    return finish(o,m,rigid(bone))
+
+_,EYES=G.anchors(PROF)
 for s,label in [(1,'L'),(-1,'R')]:
-    centers=[(s*x,y,z) for x,y,z in [(.322,.015,1.02),(.374,-.001,.985),(.433,-.023,.916),(.50,-.036,.818),(.565,-.046,.701),(.605,-.052,.593),(.61,-.05,.532),(.60,-.05,.517)]]
+    centers,widths=G.flipper_centres(PROF,s)
     def fw(p,L=label):
         t=smooth((.87-p.z)/.24); return {'flipper.'+L:1-t,'flipper_tip.'+L:t}
-    leaf('Flipper.'+label,centers,[.025,.065,.092,.099,.085,.057,.025,.004],.48,navy,fw,2)
-    # Webbed paddle foot: three rounded scallops on the leading edge.
-    outline=[(-.10,.13),(-.155,.035),(-.178,-.16),(-.159,-.245),(-.111,-.272),(-.055,-.245),(0,-.287),(.061,-.27),(.097,-.245),(.144,-.264),(.18,-.212),(.166,-.106),(.116,.10),(.055,.143)]
-    vs=[]; fs=[]; count=len(outline)
-    for z,k in [(.018,.72),(.025,.96),(.055,1),(.115,.96),(.149,.6),(.16,.22)]:
-        for x,y in outline:vs.append((s*.226+s*x*k,-.058+y*k,z))
-    for i in range(5):
-        for j in range(count):fs.append((i*count+j,i*count+(j+1)%count,(i+1)*count+(j+1)%count,(i+1)*count+j))
-    fs += [tuple(reversed(range(count))),tuple(5*count+j for j in range(count))]
-    # Mirror winding on right side.
-    if s<0:fs=[tuple(reversed(f)) for f in fs]
+    leaf('Flipper.'+label,[tuple(c) for c in centers],widths,.30,skin,fw,1,flat_x=True,disp=1.2)   # same down material as the body
+    # Feet: three splayed toes with knuckles, hooked claws and scalloped webbing.
     def footw(p,L=label):
         t=.7*smooth((-.10-p.y)/.18); return {'foot.'+L:1-t,'toe.'+L:t}
-    foot=mesh('Webbed foot.'+label,vs,fs,orange,footw,2)
-    foot.data.materials.append(sole)
-    for p in foot.data.polygons:
-        if p.center.z<4.2:p.material_index=1
-    ell('Ankle.'+label,(s*.226,.015,.218),(.095,.098,.135),orange,'leg.'+label)
-    ell('Eye.'+label,(s*.15,-.272,1.292),(.064,.042,.080),cream,'head')
-    ell('Pupil.'+label,(s*.147,-.305,1.291),(.040,.022,.050),black,'head')
-    ell('Eye sparkle.'+label,(s*.147-.011,-.328,1.312),(.012,.007,.015),white,'head',seg=16,rings=12)
+    toes,claws,webs=G.foot_parts(s)
+    for k,(vs,fs) in enumerate(toes): mesh(f'Toe {k+1}.'+label,vs,fs,orange,footw,1)
+    for k,(vs,fs) in enumerate(claws): mesh(f'Claw {k+1}.'+label,vs,fs,sole,footw,0)
+    for k,(vs,fs) in enumerate(webs): mesh(f'Web {k+1}.'+label,vs,fs,orange,footw,1)
+    ell('Foot pad.'+label,(s*.226,-.045,.045),(.080,.090,.042),orange,'foot.'+label,seg=16,rings=10)
+    ell('Ankle.'+label,(s*.226,.0,.17),(.075,.08,.12),orange,'leg.'+label,seg=16,rings=10)
+    # Small dark eye set into the head under a lid of bare skin.
+    P,n=EYES[label]; P=Vector(P); n=Vector(n).normalized()
+    up=Vector((0,0,1)); side=n.cross(up).normalized()
+    E=P-n*.012
+    ell('Eye.'+label,tuple(E),(.030,.030,.030),cream,'head',seg=16,rings=12)
+    ell('Pupil.'+label,tuple(E+n*.019),(.016,.016,.016),black,'head',seg=16,rings=10)
+    ell('Eye glint.'+label,tuple(E+n*.030+up*.009+side*.006*s),(.005,.005,.005),white,'head',seg=12,rings=8)
+    torus('Eyelid.'+label,tuple(P-n*.002),tuple(n),.031,.0075,orange,'head')
 
-# The softly flattened two-part bill provides a readable smile in profile.
-# Long slender chick bill, dark with a slightly lighter lower mandible.
-ell('Bill upper',(0,-.46,1.138),(.072,.28,.046),charcoal,'head',seg=32)
-ell('Bill seam',(0,-.465,1.112),(.066,.262,.009),black,'head',seg=32)
-ell('Bill lower',(0,-.45,1.100),(.060,.245,.028),billlow,'head',seg=32)
+# Long, slender, slightly decurved bill in two mandibles.
+(uv_,uf_),(lv_,lf_)=G.bill(PROF)
+mesh('Bill upper',uv_,uf_,charcoal,rigid('head'),1)
+mesh('Bill lower',lv_,lf_,billlow,rigid('head'),1)
 
 # No crest on a chick; the 'crest' bone is kept so the skeleton matches Pebble's clips.
-leaf('Tail tuft',[(0,.28,.33),(0,.34,.37),(0,.43,.43),(0,.48,.49)],[.12,.13,.10,.002],.5,navy,rigid('tail'),2)
+leaf('Tail tuft',[(0,.36,.30),(0,.40,.32),(0,.44,.35)],[.07,.06,.002],.5,skin,rigid('tail'),1,disp=.6)
 
 # Correct face winding/normals and consolidate to one skinned mesh.
 bpy.ops.object.select_all(action='DESELECT')
@@ -224,8 +210,8 @@ def light(name,loc,energy,size,color):
     d=bpy.data.lights.new(name,'AREA'); d.energy=energy; d.shape='DISK'; d.size=size; d.color=color
     o=bpy.data.objects.new(name,d); STUDIO.objects.link(o); o.location=loc; track(o,(0,0,85))
 light('Key • warm softbox',(260,-350,430),3700000,280,(1,.86,.7))
-light('Fill • sky',(-250,-170,220),2400000,230,(.62,.84,1))
-light('Rim',(100,230,350),4600000,200,(.72,1,.91))
+light('Fill • sky',(-250,-170,220),2400000,230,(.82,.88,1))
+light('Rim',(100,230,350),4600000,200,(1,.94,.86))
 world=bpy.data.worlds.new('Lagoon studio'); scene.world=world; world.use_nodes=True; world.node_tree.nodes['Background'].inputs[0].default_value=(.42,.46,.50,1); world.node_tree.nodes['Background'].inputs[1].default_value=.45
 camdata=bpy.data.cameras.new('Preview camera'); cam=bpy.data.objects.new('Preview camera',camdata); STUDIO.objects.link(cam); scene.camera=cam
 camdata.type='ORTHO'; camdata.ortho_scale=225; camdata.clip_end=100000; cam.location=(265,-470,235); track(cam,(0,0,84))
@@ -255,6 +241,6 @@ for v in char.data.vertices:
 stats={'vertices':len(char.data.vertices),'faces':len(char.data.polygons),'triangles':len(char.data.loop_triangles),'bones':len(arm.bones),'material_slots':len(char.data.materials),'uv_layers':len(char.data.uv_layers),'max_weight_influences':maxinf,'invalid_weight_vertices':len(bad),'dimensions_cm':list(char.dimensions),'animations':{'Pebble_Idle':[1,31],'Pebble_Jump_Test':[1,48]},'variant':'king penguin chick','fps':30,'blender_version':bpy.app.version_string}
 open(os.path.join(OUT,'source_stats.json'),'w').write(json.dumps(stats,indent=2))
 print('CHICK_STATS',json.dumps(stats),flush=True)
-for name,frame,loc,target,scale in [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Jump',18,(265,-470,250),(0,0,101),258),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215)]:
+for name,frame,loc,target,scale in [('Preview_Hero',1,(265,-470,235),(0,0,84),225),('Preview_Jump',18,(265,-470,250),(0,0,101),258),('Preview_Front',1,(0,-500,135),(0,0,84),205),('Preview_Back',1,(-220,470,200),(0,0,84),215),('Preview_Side',1,(520,-30,120),(0,0,80),200)]:
     scene.frame_set(frame); cam.location=loc; track(cam,target); camdata.ortho_scale=scale; scene.render.filepath=os.path.join(OUT,name+'.png'); bpy.ops.render.render(write_still=True)
 print('CHICK_BUILD_COMPLETE',flush=True)

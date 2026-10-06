@@ -70,28 +70,43 @@ python3 tools/make_pebble_waddle.py --package pebble/Pebble_Penguin --out pebble
 
 ## Pebble Chick (brown king-penguin-chick variant)
 
-`pebble/Pebble_Chick/` is a restyle of Pebble as a fluffy brown king penguin chick: chocolate down with
-streaks, a lighter chest and darker back, bare grey skin at the bill base, a long slender dark bill, small
-dark eyes, dark feet, no crest, and a wider, lower body with a smaller head. It uses the **same 16-bone
-skeleton** as Pebble, so clips are interchangeable between the two characters.
+`pebble/Pebble_Chick/` is a king penguin chick built on Pebble's skeleton. It has its own geometry,
+modelled from a reference photo of a real chick:
 
-![chick](pebble/Pebble_Chick/Preview_Hero.png)
+- **Pear-shaped body.** The body is lowest and widest at the belly, with a forward belly bulge, a visible neck and a smaller, slightly elongated head.
+- **Real down in the mesh.** About 840 overlapping teardrop tufts hang downward and are displaced into the surface. They are long and shaggy at the hem, full on the body and short on the head, and the skin is nearly bare around the bill and eyes. The base-colour texture is generated from the same tuft field, so the dark creases and lighter tuft tips line up with the geometry.
+- **Bill.** The bill is stout, tapered and slightly decurved, built as two mandibles.
+- **Eyes.** The small dark eyes are set into the head under a ring of bare skin.
+- **Feet.** Each foot has three thick, knuckled toes with hooked claws and webbing almost to the tips.
+- **Flippers.** The flippers hang flat against the sides and use the same down material as the body.
+
+![chick](pebble/Pebble_Chick/Preview_Sheet.png)
+
+| | |
+|---|---|
+| Triangles | 45,972 |
+| Material slots | 8 (body down uses a 1024-square texture, the rest are flat colours) |
+| Skeleton | Pebble's 16 bones, identical names, max 2 influences, weights normalized |
+| Height | about 152 cm, matching Pebble's scale |
 
 | File | What it is |
 |---|---|
-| `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, 28,384 triangles, 9 material slots, texture embedded. |
-| `AN_Pebble_Chick_Idle.fbx`, `AN_Pebble_Chick_Jump.fbx`, `AN_Pebble_Chick_Waddle.fbx` | Idle (31 f), jump test (48 f) and waddle loop (33 f) at 30 fps, in place. |
-| `T_Chick_Body_BaseColor.png` | 1024-square base colour for the body (sRGB). Other slots are flat colours. |
-| `Pebble_Chick.blend`, `Pebble_Chick_Waddle.blend` | Editable scenes, the second one with the waddle action added. |
-| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. |
-| `tools/build_pebble_chick.py` | Generates the whole variant; derived from the package's `build_pebble.py`. |
+| `SK_Pebble_Chick.fbx` | Skeletal mesh, rest pose, texture embedded. |
+| `AN_Pebble_Chick_Idle.fbx`, `AN_Pebble_Chick_Jump.fbx`, `AN_Pebble_Chick_Waddle.fbx` | Idle (31 frames), jump test (48 frames) and waddle loop (33 frames) at 30 fps, in place. |
+| `T_Chick_Body_BaseColor.png` | Base colour for the down (sRGB). |
+| `Pebble_Chick.blend`, `Pebble_Chick_Waddle.blend` | Editable scenes. The second one has the waddle action added. |
+| `Preview_*.png`, `Pebble_Chick_Waddle.gif` | Renders. `Preview_Sheet.png` shows hero, front, side and back views. |
+| `tools/chick_geometry.py` | All chick shapes: profile, tuft field, texture, bill, feet, flippers. Pure numpy. |
+| `tools/build_pebble_chick.py` | Builds the Blender scene, rig, clips, exports and previews using `chick_geometry.py`. |
 
-Import exactly as described for Pebble in `pebble/Pebble_Penguin/README_Unreal.txt`: the skeletal mesh first
-with no skeleton assigned, then each animation FBX with Import Mesh off and the new skeleton selected.
-Because bone names match Pebble's, you can also import the chick mesh onto Pebble's skeleton asset and
-share one Animation Blueprint between both characters.
+Import exactly as described for Pebble in `pebble/Pebble_Penguin/README_Unreal.txt`. Import the skeletal mesh
+first with no skeleton assigned. Then import each animation FBX with Import Mesh off and the new skeleton
+selected. Bone names match Pebble's, so you can also import the chick mesh onto Pebble's skeleton asset and
+share one Animation Blueprint. At 46k triangles it is fine for a hero character, but generate LODs in the
+Skeletal Mesh editor for crowds or distant views.
 
-Rebuild or tweak (colours, bill, eye size and body profile are all near the top of the script):
+To tweak the shape, edit `tools/chick_geometry.py`. `CTRL` is the body profile. `tuft_size` and
+`displacement_amp` control how shaggy the down is. `bill` and `foot_parts` shape the bill and feet. Then rebuild:
 
 ```
 pip install bpy numpy scipy pillow
