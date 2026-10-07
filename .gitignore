@@ -5,3 +5,6 @@ _anim_frames/
 _pose_test.png
 dist/PebbleChick_Unreal/
 dist/PenguinKit_Unreal/
+dist/Crab_Unreal/
+crab/_anim_frames/
+crab/_pose/
