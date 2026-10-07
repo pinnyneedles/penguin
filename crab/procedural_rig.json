@@ -1,0 +1,439 @@
+{
+  "units": "centimetres, 30 fps",
+  "source_space": "Blender: the crab faces -Y, its left is +X, Z is up. Unreal may mirror the Y axis on import, so read rest positions from the reference pose of the bones named here rather than hard-coding these numbers.",
+  "root": "root",
+  "body": "body",
+  "body_rest_height_cm": 13.5,
+  "shell_top_cm": 24.31,
+  "foot_goal_root": "ik_foot_root",
+  "claw_goal_root": "ik_claw_root",
+  "legs": [
+    {
+      "leg": "leg1_l",
+      "side": "L",
+      "index": 1,
+      "gait_group": "A",
+      "chain": [
+        "leg1_upper_l",
+        "leg1_lower_l",
+        "leg1_tip_l"
+      ],
+      "foot_contact": "leg1_end_l",
+      "ik_goal": "ik_leg1_l",
+      "ik_effector": "ik_leg1_ankle_l",
+      "knee_pole": "pole_leg1_l",
+      "segment_lengths_cm": [
+        13.0,
+        12.0,
+        7.0
+      ],
+      "max_reach_from_hip_cm": 32.0,
+      "hip_cm": [
+        25.98,
+        -5.48,
+        11.29
+      ],
+      "rest_foot_cm": [
+        43.71,
+        -19.33,
+        0.0
+      ],
+      "knee_tilt_deg": 30.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.0
+    },
+    {
+      "leg": "leg2_l",
+      "side": "L",
+      "index": 2,
+      "gait_group": "B",
+      "chain": [
+        "leg2_upper_l",
+        "leg2_lower_l",
+        "leg2_tip_l"
+      ],
+      "foot_contact": "leg2_end_l",
+      "ik_goal": "ik_leg2_l",
+      "ik_effector": "ik_leg2_ankle_l",
+      "knee_pole": "pole_leg2_l",
+      "segment_lengths_cm": [
+        15.0,
+        13.5,
+        7.5
+      ],
+      "max_reach_from_hip_cm": 36.0,
+      "hip_cm": [
+        23.48,
+        5.14,
+        11.29
+      ],
+      "rest_foot_cm": [
+        48.02,
+        0.37,
+        0.0
+      ],
+      "knee_tilt_deg": 16.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.535
+    },
+    {
+      "leg": "leg3_l",
+      "side": "L",
+      "index": 3,
+      "gait_group": "A",
+      "chain": [
+        "leg3_upper_l",
+        "leg3_lower_l",
+        "leg3_tip_l"
+      ],
+      "foot_contact": "leg3_end_l",
+      "ik_goal": "ik_leg3_l",
+      "ik_effector": "ik_leg3_ankle_l",
+      "knee_pole": "pole_leg3_l",
+      "segment_lengths_cm": [
+        15.0,
+        13.5,
+        7.5
+      ],
+      "max_reach_from_hip_cm": 36.0,
+      "hip_cm": [
+        16.78,
+        11.9,
+        11.29
+      ],
+      "rest_foot_cm": [
+        39.73,
+        18.92,
+        -0.0
+      ],
+      "knee_tilt_deg": -24.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.07
+    },
+    {
+      "leg": "leg4_l",
+      "side": "L",
+      "index": 4,
+      "gait_group": "B",
+      "chain": [
+        "leg4_upper_l",
+        "leg4_lower_l",
+        "leg4_tip_l"
+      ],
+      "foot_contact": "leg4_end_l",
+      "ik_goal": "ik_leg4_l",
+      "ik_effector": "ik_leg4_ankle_l",
+      "knee_pole": "pole_leg4_l",
+      "segment_lengths_cm": [
+        13.0,
+        12.0,
+        7.0
+      ],
+      "max_reach_from_hip_cm": 32.0,
+      "hip_cm": [
+        9.72,
+        15.4,
+        11.29
+      ],
+      "rest_foot_cm": [
+        25.18,
+        30.34,
+        0.0
+      ],
+      "knee_tilt_deg": -32.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.605
+    },
+    {
+      "leg": "leg1_r",
+      "side": "R",
+      "index": 1,
+      "gait_group": "B",
+      "chain": [
+        "leg1_upper_r",
+        "leg1_lower_r",
+        "leg1_tip_r"
+      ],
+      "foot_contact": "leg1_end_r",
+      "ik_goal": "ik_leg1_r",
+      "ik_effector": "ik_leg1_ankle_r",
+      "knee_pole": "pole_leg1_r",
+      "segment_lengths_cm": [
+        13.0,
+        12.0,
+        7.0
+      ],
+      "max_reach_from_hip_cm": 32.0,
+      "hip_cm": [
+        -25.98,
+        -5.48,
+        11.29
+      ],
+      "rest_foot_cm": [
+        -43.71,
+        -19.33,
+        0.0
+      ],
+      "knee_tilt_deg": 30.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.5
+    },
+    {
+      "leg": "leg2_r",
+      "side": "R",
+      "index": 2,
+      "gait_group": "A",
+      "chain": [
+        "leg2_upper_r",
+        "leg2_lower_r",
+        "leg2_tip_r"
+      ],
+      "foot_contact": "leg2_end_r",
+      "ik_goal": "ik_leg2_r",
+      "ik_effector": "ik_leg2_ankle_r",
+      "knee_pole": "pole_leg2_r",
+      "segment_lengths_cm": [
+        15.0,
+        13.5,
+        7.5
+      ],
+      "max_reach_from_hip_cm": 36.0,
+      "hip_cm": [
+        -23.48,
+        5.14,
+        11.29
+      ],
+      "rest_foot_cm": [
+        -48.02,
+        0.37,
+        0.0
+      ],
+      "knee_tilt_deg": 16.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.035
+    },
+    {
+      "leg": "leg3_r",
+      "side": "R",
+      "index": 3,
+      "gait_group": "B",
+      "chain": [
+        "leg3_upper_r",
+        "leg3_lower_r",
+        "leg3_tip_r"
+      ],
+      "foot_contact": "leg3_end_r",
+      "ik_goal": "ik_leg3_r",
+      "ik_effector": "ik_leg3_ankle_r",
+      "knee_pole": "pole_leg3_r",
+      "segment_lengths_cm": [
+        15.0,
+        13.5,
+        7.5
+      ],
+      "max_reach_from_hip_cm": 36.0,
+      "hip_cm": [
+        -16.78,
+        11.9,
+        11.29
+      ],
+      "rest_foot_cm": [
+        -39.73,
+        18.92,
+        -0.0
+      ],
+      "knee_tilt_deg": -24.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.57
+    },
+    {
+      "leg": "leg4_r",
+      "side": "R",
+      "index": 4,
+      "gait_group": "A",
+      "chain": [
+        "leg4_upper_r",
+        "leg4_lower_r",
+        "leg4_tip_r"
+      ],
+      "foot_contact": "leg4_end_r",
+      "ik_goal": "ik_leg4_r",
+      "ik_effector": "ik_leg4_ankle_r",
+      "knee_pole": "pole_leg4_r",
+      "segment_lengths_cm": [
+        13.0,
+        12.0,
+        7.0
+      ],
+      "max_reach_from_hip_cm": 32.0,
+      "hip_cm": [
+        -9.72,
+        15.4,
+        11.29
+      ],
+      "rest_foot_cm": [
+        -25.18,
+        30.34,
+        0.0
+      ],
+      "knee_tilt_deg": -32.0,
+      "tip_lean_deg": 25.0,
+      "phase_offset": 0.105
+    }
+  ],
+  "claws": [
+    {
+      "claw": "claw_l",
+      "chain": [
+        "claw_arm_l",
+        "claw_wrist_l",
+        "claw_hand_l",
+        "claw_pincer_l"
+      ],
+      "pincer_tip": "claw_tip_l",
+      "pinch_point": "claw_pinch_l",
+      "ik_goal": "ik_claw_l",
+      "open_axis": "claw_pincer bone local X; a negative rotation opens the moving finger (0.8 rad is wide open)",
+      "lengths_cm": [
+        11.0,
+        6.0,
+        11.0,
+        11.77
+      ]
+    },
+    {
+      "claw": "claw_r",
+      "chain": [
+        "claw_arm_r",
+        "claw_wrist_r",
+        "claw_hand_r",
+        "claw_pincer_r"
+      ],
+      "pincer_tip": "claw_tip_r",
+      "pinch_point": "claw_pinch_r",
+      "ik_goal": "ik_claw_r",
+      "open_axis": "claw_pincer bone local X; a negative rotation opens the moving finger (0.8 rad is wide open)",
+      "lengths_cm": [
+        14.52,
+        7.92,
+        14.52,
+        13.19
+      ]
+    }
+  ],
+  "eyes": {
+    "bones": [
+      "eye_l",
+      "eye_r"
+    ],
+    "aim_axis": "bone +Y runs up the stalk; tilt it to look"
+  },
+  "antennae": [
+    "antenna_l",
+    "antenna_r"
+  ],
+  "mouthparts": [
+    "mouthpart_l",
+    "mouthpart_r"
+  ],
+  "gait": {
+    "pattern": "alternating tetrapod: group A (leg1_l, leg2_r, leg3_l, leg4_r) and group B (the others) half a cycle apart; each leg leads the one in front of it by metachronal_offset",
+    "group_A": [
+      "leg1_l",
+      "leg3_l",
+      "leg2_r",
+      "leg4_r"
+    ],
+    "group_B": [
+      "leg2_l",
+      "leg4_l",
+      "leg1_r",
+      "leg3_r"
+    ],
+    "group_B_phase": 0.5,
+    "metachronal_offset": 0.035,
+    "swing_outward_arc_cm": 1.2,
+    "sideways_leading_legs_step_higher": 0.2,
+    "body_dip_lag_cycles": 0.1,
+    "foot_plant_target": "the rest foot position under the body at mid-stance, projected onto the ground",
+    "presets": {
+      "scuttle": {
+        "clip": "Crab_Scuttle_Left / _Right",
+        "period_frames": 14,
+        "duty": 0.6,
+        "speed_cm_s": 50.0,
+        "stride_cm": 14.0,
+        "step_height_cm": 5.5
+      },
+      "walk_forward": {
+        "clip": "Crab_Walk_Forward",
+        "period_frames": 24,
+        "duty": 0.65,
+        "speed_cm_s": 22.0,
+        "stride_cm": 11.44,
+        "step_height_cm": 4.0
+      },
+      "walk_backward": {
+        "clip": "Crab_Walk_Backward",
+        "period_frames": 24,
+        "duty": 0.68,
+        "speed_cm_s": 18.0,
+        "stride_cm": 9.79,
+        "step_height_cm": 3.5
+      },
+      "turn": {
+        "clip": "Crab_Turn_Left / _Right",
+        "period_frames": 20,
+        "duty": 0.6,
+        "turn_deg_s": 60.0,
+        "sweep_deg": 24.0,
+        "step_height_cm": 4.5
+      }
+    }
+  },
+  "planted_rule": "a foot is planted while its ik_legN bone is lower than 0.5 cm in the clip; use this for foot locking or footstep effects",
+  "secondary_motion": [
+    {
+      "bone": "eye_l",
+      "lean_rad_per_g": 0.1,
+      "frequency_hz": 5.0,
+      "damping_ratio": 0.3,
+      "limit_rad": 0.22
+    },
+    {
+      "bone": "eye_r",
+      "lean_rad_per_g": 0.1,
+      "frequency_hz": 5.0,
+      "damping_ratio": 0.3,
+      "limit_rad": 0.22
+    },
+    {
+      "bone": "antenna_l",
+      "lean_rad_per_g": 0.32,
+      "frequency_hz": 3.2,
+      "damping_ratio": 0.18,
+      "limit_rad": 0.45
+    },
+    {
+      "bone": "antenna_r",
+      "lean_rad_per_g": 0.32,
+      "frequency_hz": 3.2,
+      "damping_ratio": 0.18,
+      "limit_rad": 0.45
+    },
+    {
+      "bone": "claw_arm_l",
+      "lean_rad_per_g": 0.04,
+      "frequency_hz": 3.0,
+      "damping_ratio": 0.45,
+      "limit_rad": 0.1
+    },
+    {
+      "bone": "claw_arm_r",
+      "lean_rad_per_g": 0.04,
+      "frequency_hz": 3.0,
+      "damping_ratio": 0.45,
+      "limit_rad": 0.1
+    }
+  ]
+}

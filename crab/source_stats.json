@@ -1,14 +1,14 @@
 {
   "vertices": 17684,
   "triangles": 35064,
-  "bones": 36,
+  "bones": 80,
   "material_slots": [
     "M_Crab_Shell",
     "M_Crab_Eye"
   ],
   "uv_layers": 1,
   "texture_px": 2048,
-  "texels_per_cm": 14.57,
+  "texels_per_cm": 14.49,
   "max_weight_influences": 1,
   "invalid_weight_vertices": 0,
   "bounds_cm": {
@@ -34,42 +34,131 @@
   "claws": "right: heavy crusher, 32% larger; left: slimmer cutter",
   "fps": 30,
   "blender_version": "5.0.1",
+  "lod_triangles": [
+    35064,
+    13392,
+    6024,
+    3420
+  ],
+  "skinned_bones": [
+    "antenna_l",
+    "antenna_r",
+    "body",
+    "claw_arm_l",
+    "claw_arm_r",
+    "claw_hand_l",
+    "claw_hand_r",
+    "claw_pincer_l",
+    "claw_pincer_r",
+    "claw_wrist_l",
+    "claw_wrist_r",
+    "eye_l",
+    "eye_r",
+    "leg1_lower_l",
+    "leg1_lower_r",
+    "leg1_tip_l",
+    "leg1_tip_r",
+    "leg1_upper_l",
+    "leg1_upper_r",
+    "leg2_lower_l",
+    "leg2_lower_r",
+    "leg2_tip_l",
+    "leg2_tip_r",
+    "leg2_upper_l",
+    "leg2_upper_r",
+    "leg3_lower_l",
+    "leg3_lower_r",
+    "leg3_tip_l",
+    "leg3_tip_r",
+    "leg3_upper_l",
+    "leg3_upper_r",
+    "leg4_lower_l",
+    "leg4_lower_r",
+    "leg4_tip_l",
+    "leg4_tip_r",
+    "leg4_upper_l",
+    "leg4_upper_r",
+    "mouthpart_l",
+    "mouthpart_r"
+  ],
+  "helper_bones": [
+    "claw_pinch_l",
+    "claw_pinch_r",
+    "claw_tip_l",
+    "claw_tip_r",
+    "ik_claw_l",
+    "ik_claw_r",
+    "ik_claw_root",
+    "ik_foot_root",
+    "ik_leg1_ankle_l",
+    "ik_leg1_ankle_r",
+    "ik_leg1_l",
+    "ik_leg1_r",
+    "ik_leg2_ankle_l",
+    "ik_leg2_ankle_r",
+    "ik_leg2_l",
+    "ik_leg2_r",
+    "ik_leg3_ankle_l",
+    "ik_leg3_ankle_r",
+    "ik_leg3_l",
+    "ik_leg3_r",
+    "ik_leg4_ankle_l",
+    "ik_leg4_ankle_r",
+    "ik_leg4_l",
+    "ik_leg4_r",
+    "leg1_end_l",
+    "leg1_end_r",
+    "leg2_end_l",
+    "leg2_end_r",
+    "leg3_end_l",
+    "leg3_end_r",
+    "leg4_end_l",
+    "leg4_end_r",
+    "pole_leg1_l",
+    "pole_leg1_r",
+    "pole_leg2_l",
+    "pole_leg2_r",
+    "pole_leg3_l",
+    "pole_leg3_r",
+    "pole_leg4_l",
+    "pole_leg4_r"
+  ],
   "control_rig": {
     "legs": {
-      "leg1.L": {
+      "leg1_l": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg2.L": {
+      "leg2_l": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg3.L": {
+      "leg3_l": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg4.L": {
+      "leg4_l": {
         "pole_angle_deg": -90.04,
         "rest_error_deg": 0.0
       },
-      "leg1.R": {
+      "leg1_r": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg2.R": {
+      "leg2_r": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg3.R": {
+      "leg3_r": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       },
-      "leg4.R": {
+      "leg4_r": {
         "pole_angle_deg": -90.02,
         "rest_error_deg": 0.0
       }
     },
     "foot_follow_error_cm": 0.0508,
-    "note": "IK_foot*: drag to place a foot; POLE_knee*: knee direction; other bones are FK"
+    "note": "ik_legN_l/r: drag to place a foot (the leg follows by IK); pole_legN_l/r: knee direction; claws, eyes, antennae and body are rotated directly"
   }
 }

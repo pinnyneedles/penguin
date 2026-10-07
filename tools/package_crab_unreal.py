@@ -20,7 +20,7 @@ WHAT = {"Idle": "breathing, eye stalks glance around, antenna flicks, mouthparts
         "Scuttle_Left": "sideways run toward the crab's own left", "Scuttle_Right": "sideways run toward its right",
         "Walk_Forward": "slow forward walk", "Walk_Backward": "backs away with its claws up",
         "Turn_Left": "turns in place, counter-clockwise seen from above", "Turn_Right": "turns in place, clockwise",
-        "Threat": "gathers its legs, rears up, claws raised wide and open, two snaps",
+        "Threat": "rears up, claws raised wide and open, two snaps",
         "Attack_Snap": "wind-up, lunge and double pinch", "Claw_Snap": "claws only, for a layered blend: left snap, right snap",
         "Hit": "flinch: knocked back, eyes fold, claws tucked", "Death": "curls up, flips onto its back, legs twitch, then still"}
 # The packaged .blend files keep colour and ORM maps in Content/Textures and the OpenGL normal map next to them.

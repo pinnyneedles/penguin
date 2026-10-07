@@ -200,35 +200,55 @@ to rebuild.
 
 ## Crab (rigged enemy)
 
-**Download for Unreal:** [`dist/Crab_Unreal.zip`](dist/Crab_Unreal.zip) has the skeletal mesh and skeleton, eight
-animations, the textures, reference data, previews and the Blender sources. Its `IMPORT_GUIDE.html` walks through
-importing into Unreal Engine 5 and setting up the Character and Animation Blueprints for an enemy that strafes. The
-guide's source is `crab/IMPORT_GUIDE.md`, and `python3 tools/package_crab_unreal.py` rebuilds the zip.
+**Download for Unreal:** [`dist/Crab_Unreal.zip`](dist/Crab_Unreal.zip) has the skeletal mesh with three lower levels
+of detail, the skeleton, twelve animations, the textures, reference data for procedural animation, previews and the
+Blender sources. Its `IMPORT_GUIDE.html` walks through importing into Unreal Engine 5, the physics asset, the
+Character and Animation Blueprints for an enemy that strafes and turns, and an optional procedural setup (feet that
+adapt to uneven ground, claw and eye aiming). The guide's source is `crab/IMPORT_GUIDE.md`, and
+`python3 tools/package_crab_unreal.py` rebuilds the zip.
 
 `crab/` is a red crab built from rigid shell pieces, one bone each, as on a real crab, with ball joints hidden in
-the hinges. It has a 36-bone skeleton (`root`, `body`, two eye stalks, four bones per claw, three per leg),
-and is 63.5 cm across the shell, 96 cm across the legs and 28 cm tall, with 35,064 triangles in two material
-slots. It has a heavy crusher claw on the right and a slimmer cutter on the left. The colour,
-DirectX normal and ORM maps (with baked ambient occlusion) share one 2048 px atlas.
+the hinges. It is 63.5 cm across the shell, 96 cm across the legs and 28 cm tall, with a heavy crusher claw on the
+right and a slimmer cutter on the left. The full-detail mesh has 35,064 triangles in two material slots; LOD1 to LOD3
+have 13,392, 6,024 and 3,420 and share the skeleton and the 2048 px colour, DirectX normal and ORM atlas.
 
 ![crab](crab/Preview_Sheet.png)
 
+**Skeleton (80 bones, Unreal-style names).** 40 bones move the mesh: `root`, `body`, eye stalks, antennae,
+mouthparts, four bones per claw and three per leg (`leg1_upper_l` and so on). 40 helpers have no skin and exist for
+procedural animation and gameplay: a foot IK goal per leg (`ik_leg1_l`, under `ik_foot_root`), an ankle effector
+under each goal for Unreal's Two Bone IK, a knee pole per leg, foot contact points, claw IK goals, claw tips and
+claw hit points. Every clip animates the IK goals onto the feet and claw tips, as Unreal's `ik_foot` bones do.
+`crab/Rig_Diagram.png` shows them and `crab/procedural_rig.json` lists every chain, length, gait timing and spring.
+
+![rig](crab/Rig_Diagram.png)
+
 | Clip | Frames | Loops | What it does |
 |---|---|---|---|
-| Crab_Idle | 91 | yes | breathing, eye stalks look around, a claw snip, a back leg shuffles |
+| Crab_Idle | 91 | yes | breathing, eye stalks glance left and right, antenna flicks, mouthparts, claw snips, two leg shuffles |
 | Crab_Scuttle_Left / Right | 15 | yes | sideways run; planted feet match 50 cm/s |
 | Crab_Walk_Forward | 25 | yes | slow forward walk; planted feet match 22 cm/s |
+| Crab_Walk_Backward | 25 | yes | backs away with claws up; planted feet match 18 cm/s |
+| Crab_Turn_Left / Right | 21 | yes | turn in place; planted feet match 60° per second |
 | Crab_Threat | 55 | no | rears up, claws raised wide and open, two snaps |
 | Crab_Attack_Snap | 33 | no | wind-up, lunge and double pinch (hit on frame 13) |
+| Crab_Claw_Snap | 31 | no | claws only, layered over any clip: left snap, right snap |
 | Crab_Hit | 21 | no | flinch: knocked back, eyes fold, claws tucked |
 | Crab_Death | 60 | no | curls up, flips onto its back, legs twitch, then still |
 
-![scuttle](crab/Crab_Scuttle_Travel.gif)
+![scuttle](crab/Crab_Scuttle_Travel.gif) ![procedural](crab/Crab_Procedural_Terrain.gif)
 
-The legs use an exact two-bone IK with the tip leaning outward, so planted feet never slide: `tools/verify_crab.py`
-measures 0.0 cm of foot slip at the stated speeds, seamless loops and no part of the crab below the ground, and
-re-imports every FBX (results in `crab/anim_validation.json`). `crab/Crab.blend` also has a posing rig for
-animators: drag an `IK_foot` control and the leg follows, with a `POLE_knee` control for the knee.
+The legs use an exact two-bone IK with the tip leaning outward; when a leg is at full stretch its tip pivots on its
+point, so planted feet never slide. The gait is an alternating tetrapod with a small back-to-front ripple, quick
+lift-offs and gentle touch-downs, and a body dip just after each set of feet lands. Eye stalks, antennae and claws are
+damped springs driven by their own acceleration. `tools/verify_crab.py` re-imports every FBX (mesh, levels of detail
+and clips) and measures 0.0 cm of foot slip at the stated speeds and turn rate, seamless loops, IK goals that match
+the feet and claw tips exactly, and no part of the crab below the ground (results in `crab/anim_validation.json`).
+`Crab_Procedural_Terrain.gif` drives the same rig with no clips at all: a gait clock places each foot on bumpy,
+rising ground and the body follows a plane fitted to the feet, with 0.0 cm of planted-foot slip.
+
+`crab/Crab.blend` has a posing rig for animators: drag an `ik_legN` bone and the leg follows by IK, aiming its knee
+at the `pole_legN` bone. These are the same bones a game exports, so poses and IK setups carry over.
 
 The model went through three design passes after an independent critique. Each change was kept only if it won blind
 side-by-side reviews: three reviewers per round, left and right randomised, and adopted only when at least two picked
@@ -239,12 +259,20 @@ pairs and back on the rear pairs. That version beat the original legs 3 to 0 (tw
 version overall 3 to 0. Two defects the reviewers spotted were then fixed: a crease at the top of the shell and peach
 patches on the claw joints.
 
+The animations were refined the same way, clip by clip, against the first version. The refined scuttle won 3 to 0
+(one with high confidence: the old one let an eye stalk dip into the shell), the idle 2 to 1 (both winners with medium
+confidence: the stalks now glance together instead of going cross-eyed), the forward walk 2 to 0 with one tie and the
+attack 3 to 0. The refined threat, hit and death did not clear the bar (one reviewer preferred the old threat and hit
+with medium confidence, and two of three saw no difference in the death), so those three keep their first-version
+motion on the new skeleton.
+
 To change the crab, edit `tools/crab_geometry.py` (proportions, outline, legs, claws, eyes) or
 `tools/crab_textures.py` (colours and surface detail), then rebuild:
 
 ```
 pip install bpy numpy scipy pillow markdown
 python3 tools/build_crab.py --out crab
+python3 tools/render_crab_lods.py crab
 python3 tools/make_crab_anims.py --blend crab/Crab.blend --out crab
 python3 tools/verify_crab.py crab
 python3 tools/package_crab_unreal.py

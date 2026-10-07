@@ -340,33 +340,4 @@ if "--no-previews" not in argv:
     sheet = Image.new("RGB", (1600, 1600))
     for k, im in enumerate(ims): sheet.paste(im, ((k % 2) * 800, (k // 2) * 800))
     sheet.save(os.path.join(OUT, "Preview_Sheet.png"))
-    # levels of detail side by side, with their triangle edges drawn on the shell
-    wire = shell.copy(); wire.name = "PREVIEW • LOD wire"; wn = wire.node_tree
-    wbs = next(n for n in wn.nodes if n.type == "BSDF_PRINCIPLED")
-    col = wbs.inputs["Base Color"].links[0].from_socket
-    wf = wn.nodes.new("ShaderNodeWireframe"); wf.use_pixel_size = True; wf.inputs["Size"].default_value = 0.9
-    mix = wn.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
-    rgba = [i for i in mix.inputs if i.type == "RGBA"]
-    wn.links.new(wf.outputs["Fac"], mix.inputs[0]); wn.links.new(col, rgba[0]); rgba[1].default_value = (0.02, 0.02, 0.02, 1)
-    wn.links.new(next(o for o in mix.outputs if o.type == "RGBA"), wbs.inputs["Base Color"])
-    LOD_COLL.hide_render = False
-    cam.location = (150, -220, 140); track(cam, (0, -6, 12)); camd.ortho_scale = 125
-    sc.render.resolution_x = sc.render.resolution_y = 600
-    shots = []
-    for lv, ob in enumerate([char] + LODS):
-        for o in [char] + LODS: o.hide_render = o is not ob
-        ob.hide_set(False); old_mat = ob.data.materials[0]; ob.data.materials[0] = wire
-        pth = os.path.join(OUT, f"_lod{lv}.png"); sc.render.filepath = pth; bpy.ops.render.render(write_still=True)
-        ob.data.materials[0] = old_mat; shots.append(pth)
-        if lv: ob.hide_set(True)
-    for o in [char] + LODS: o.hide_render = False
-    LOD_COLL.hide_render = True; bpy.data.materials.remove(wire)
-    from PIL import ImageDraw, ImageFont
-    try: font = ImageFont.truetype("DejaVuSans.ttf", 22)
-    except OSError: font = ImageFont.load_default()
-    sheet = Image.new("RGB", (2400, 640), (240, 240, 238)); dr = ImageDraw.Draw(sheet)
-    for lv, pth in enumerate(shots):
-        sheet.paste(Image.open(pth).convert("RGB"), (lv * 600, 0)); os.remove(pth)
-        dr.text((lv * 600 + 14, 606), f"LOD{lv}: {stats['lod_triangles'][lv]:,} triangles", fill=(30, 30, 30), font=font)
-    sheet.save(os.path.join(OUT, "Preview_LODs.png"))
 print("CRAB_BUILD_COMPLETE", flush=True)

@@ -13,7 +13,7 @@ Clips (30 fps, in place; looping clips repeat frame 1 as their last frame):
     Crab_Walk_Backward    25 f  loop   backing away, claws up; planted feet match 18 cm/s
     Crab_Turn_Left        21 f  loop   turn in place, counter-clockwise seen from above, 60 degrees per second
     Crab_Turn_Right       21 f  loop   the same, clockwise
-    Crab_Threat           55 f         gathers its legs, rears up, claws raised wide and open, snaps (frames 22, 34)
+    Crab_Threat           55 f         rears up, claws raised wide and open, snaps (frames 22, 34)
     Crab_Attack_Snap      33 f         wind-up, lunge and double pinch (hit on frame 13)
     Crab_Claw_Snap        31 f         claws only, for a layered blend on top of any clip: snaps on frames 9 and 23
     Crab_Hit              21 f         flinch: knocked back, eyes fold down, claws tucked
@@ -23,10 +23,10 @@ Every clip also animates the helper bones: ik_legN_l/r follow the foot contact p
 tips, as Unreal's ik_foot bones do, so foot locking and ground adaptation can read them.
 
 Legs use an exact two-bone IK with the tip leaning outward, so planted feet stay put. The gait is an alternating
-tetrapod with a small back-to-front ripple. Eye stalks, antennae and claws carry secondary motion: each is a damped
-spring driven by its own acceleration. Every piece of the crab is rigid and belongs to one bone, so ground contact
-is computed exactly from the bone transforms. The armature object is named "Armature" so Unreal does not add an
-extra root bone.
+tetrapod with a small back-to-front ripple. In the idle, locomotion and attack clips the eye stalks, antennae and
+claws carry secondary motion: each is a damped spring driven by its own acceleration. Every piece of the crab is
+rigid and belongs to one bone, so ground contact is computed exactly from the bone transforms. The armature object
+is named "Armature" so Unreal does not add an extra root bone.
 
 Also written: procedural_rig.json (chains, IK goals, poles, gait timing, spring settings for a Control Rig or
 AnimGraph setup), Rig_Diagram.png, and Crab_Procedural_Terrain.gif, which drives the rig the procedural way:
@@ -52,7 +52,9 @@ PLANT_Z = 0.5            # cm: a foot whose IK goal is lower than this is plante
 G_CM = 981.0
 # secondary motion: (radians of lean per g of acceleration, natural frequency Hz, damping ratio, limit radians)
 JIGGLE = {"eye": (0.10, 5.0, 0.30, 0.22), "antenna": (0.32, 3.2, 0.18, 0.45), "claw_arm": (0.04, 3.0, 0.45, 0.10)}
-CLASSIC = set()          # clips kept at the previous version's motion (see the README for the review results)
+# Clips kept at the previous version's motion: in blind side-by-side reviews (three reviewers, sides randomised) the
+# refined versions of these did not win clearly enough. Idle, the scuttles, the forward walk and the attack did.
+CLASSIC = {"Crab_Threat", "Crab_Hit", "Crab_Death"}
 
 
 def bn(name, side):

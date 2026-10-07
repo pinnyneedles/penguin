@@ -138,10 +138,10 @@ skeletal mesh's **Asset Details**. If you skip this step the crab works fine wit
     | Crab_Walk_Backward | 25 | 0.8 s | yes | backs away with its claws up; planted feet match 18 cm/s |
     | Crab_Turn_Left | 21 | 0.67 s | yes | turns in place, counter-clockwise seen from above; planted feet match 60° per second |
     | Crab_Turn_Right | 21 | 0.67 s | yes | the same, clockwise |
-    | Crab_Threat | 55 | 1.8 s | no | gathers its legs, rears up, claws raised wide and open, snaps on frames 22 and 34 |
+    | Crab_Threat | 55 | 1.8 s | no | rears up, claws raised wide and open, snaps on frames 22 and 34 |
     | Crab_Attack_Snap | 33 | 1.07 s | no | wind-up, lunge and double pinch; the claws close on frame 13 |
     | Crab_Claw_Snap | 31 | 1.0 s | no | claws only, to layer over any other clip: the left claw snaps on frame 9, the right on frame 23 |
-    | Crab_Hit | 21 | 0.67 s | no | flinch: knocked back, eye stalks and antennae fold down, claws tucked in |
+    | Crab_Hit | 21 | 0.67 s | no | flinch: knocked back, eye stalks fold down, claws tucked in |
     | Crab_Death | 60 | 1.97 s | no | curls up, hops and flips onto its back (lands on frame 25), legs twitch, then still |
 
 4. Quick test: drag `SK_Crab` into a level, select it, set **Animation Mode** = Use Animation Asset and pick any clip.
@@ -149,8 +149,9 @@ skeletal mesh's **Asset Details**. If you skip this step the crab works fine wit
 
 All clips are in place: the root bone never moves, and your Character Movement moves and turns the capsule. Looping
 clips repeat their first pose as their last frame, which is what Unreal expects for a seamless loop. Every one-shot
-clip starts on the idle's first pose, and every one except Death also ends there. Eye stalks, antennae and claws sway
-and settle with the body's motion in every clip, so the crab looks alive without any extra setup.
+clip starts on the idle's first pose, and every one except Death also ends there. In the idle, walking, scuttling,
+turning and attack clips the eye stalks, antennae and claws sway and settle with the body's motion, so the crab looks
+alive without any extra setup.
 
 Every clip also moves the helper bones: each `ik_legN` sits exactly on its foot, and each `ik_claw` on its claw tip.
 That is what lets the IK setups in Step 10 start from the animated pose without changing it.
@@ -223,8 +224,8 @@ still does the moving. The generated one may be uneven, so rebuild it once:
 
     | Sequence | Frame | Event |
     |---|---|---|
-    | Crab_Scuttle_Left / Right | 1 and 8 | footsteps (each set of four feet lands) |
-    | Crab_Walk_Forward / Backward | 12 and 24 | footsteps |
+    | Crab_Scuttle_Left / Right | 1 and 7 | footsteps (each set of four feet lands) |
+    | Crab_Walk_Forward / Backward | 11 and 23 | footsteps |
     | Crab_Turn_Left / Right | 10 and 20 | footsteps |
     | Crab_Threat | 22 and 34 | claw snap |
     | Crab_Attack_Snap | 13 | hit: claws close, apply damage here |
