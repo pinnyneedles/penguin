@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build the rigged crab for the penguin game: a skinned mesh with three lower levels of detail, an 80-bone skeleton
-(40 skinned bones plus IK goals, knee poles, foot contact and claw points for procedural animation), a painted
-texture atlas (colour, normal map, ORM with baked ambient occlusion), Unreal FBX files and preview renders.
+(root, 39 bones that carry the mesh, and 40 helpers: IK goals, knee poles, foot contact and claw points for procedural
+animation), a painted texture atlas (colour, normal map, ORM with baked ambient occlusion), Unreal FBX files and
+preview renders.
 
     python3 tools/build_crab.py [--out crab] [--tex 2048] [--no-previews]
 

@@ -60,7 +60,7 @@ rig = bpy.data.objects["Armature"]; mesh = bpy.data.objects["SK_Crab"]
 sc = bpy.context.scene
 ends = [b.name for b in rig.data.bones if "_end_" in b.name]
 goal_pairs = [(f"ik_{e.replace('_end', '')}", e) for e in ends] + [(f"ik_claw_{s}", f"claw_tip_{s}") for s in "lr"]
-ankle_pairs = [(f"ik_{e.replace('_end', '')}_ankle", e.replace("_end", "_tip")) for e in ends]
+ankle_pairs = [(f"ik_{e.replace('_end_', '_ankle_')}", e.replace("_end", "_tip")) for e in ends]
 res = {}
 for act in sorted([a for a in bpy.data.actions if a.name.startswith("Crab_")], key=lambda a: a.name):
     set_action(rig, act)

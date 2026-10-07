@@ -1,0 +1,8 @@
+{
+  "frames": 105,
+  "speed_cm_s": 40.0,
+  "climb_cm": 14.0,
+  "planted_foot_error_cm": 0.0,
+  "planted_foot_slip_cm": 0.0,
+  "max_body_lowering_for_reach_cm": 0.0
+}

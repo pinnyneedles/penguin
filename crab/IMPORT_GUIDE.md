@@ -29,7 +29,7 @@ and fully procedural walking.
 |---|---|
 | Size | 63.5 cm across the shell, 96 cm leg tip to leg tip, 84 cm from claw tips to back legs, 28 cm tall. Pebble Chick is 152 cm tall, so the crab comes up to about its knee |
 | Triangles | 35,064 at full detail; 13,392, 6,024 and 3,420 for LOD1 to LOD3. Two material slots (`M_Crab_Shell`, `M_Crab_Eye`) |
-| Skeleton | 80 bones under `root`. 40 move the mesh: `body`, eye stalks, antennae, mouthparts, four bones per claw and three per leg. 40 are helpers with no skin: IK goals, knee poles, foot contact points and claw hit points (see Step 10 and `Reference/Rig_Diagram.png`) |
+| Skeleton | 80 bones. `root` and 39 bones that carry the mesh: `body`, eye stalks, antennae, mouthparts, four bones per claw and three per leg. The other 40 are helpers with no skin: IK goals, knee poles, foot contact points and claw hit points (see Step 10 and `Reference/Rig_Diagram.png`) |
 | Skinning | Rigid. Every piece of shell follows exactly one bone, as on a real crab, so nothing stretches at any level of detail |
 | Claws | A heavy crusher claw on the right (32% bigger, with blunt molars) and a slimmer cutter on the left (fine sharp teeth), like many real crabs |
 | Units | Centimetres, Z up, 30 fps |

@@ -1,7 +1,7 @@
 {
   "skeletal_mesh": {
     "armature_object": "Armature",
-    "bones": 36,
+    "bones": 80,
     "top_bones": [
       "root"
     ],
@@ -15,24 +15,104 @@
       "T_Crab_Normal_GL"
     ],
     "every_vertex_one_bone_weight_1": true,
+    "skinned_bones": 39,
+    "groups_are_bones": true,
     "height_cm": 28.0
+  },
+  "lods": {
+    "LOD1": {
+      "armature_object": "Armature",
+      "bones": 80,
+      "top_bones": [
+        "root"
+      ],
+      "triangles": 13392,
+      "materials": [
+        "M_Crab_Shell",
+        "M_Crab_Eye"
+      ],
+      "embedded_images": [
+        "T_Crab_BaseColor",
+        "T_Crab_Normal_GL"
+      ],
+      "every_vertex_one_bone_weight_1": true,
+      "skinned_bones": 39,
+      "groups_are_bones": true,
+      "height_cm": 28.0,
+      "same_skeleton_as_lod0": true
+    },
+    "LOD2": {
+      "armature_object": "Armature",
+      "bones": 80,
+      "top_bones": [
+        "root"
+      ],
+      "triangles": 6024,
+      "materials": [
+        "M_Crab_Shell",
+        "M_Crab_Eye"
+      ],
+      "embedded_images": [
+        "T_Crab_BaseColor",
+        "T_Crab_Normal_GL"
+      ],
+      "every_vertex_one_bone_weight_1": true,
+      "skinned_bones": 39,
+      "groups_are_bones": true,
+      "height_cm": 28.0,
+      "same_skeleton_as_lod0": true
+    },
+    "LOD3": {
+      "armature_object": "Armature",
+      "bones": 80,
+      "top_bones": [
+        "root"
+      ],
+      "triangles": 3420,
+      "materials": [
+        "M_Crab_Shell",
+        "M_Crab_Eye"
+      ],
+      "embedded_images": [
+        "T_Crab_BaseColor",
+        "T_Crab_Normal_GL"
+      ],
+      "every_vertex_one_bone_weight_1": true,
+      "skinned_bones": 39,
+      "groups_are_bones": true,
+      "height_cm": 28.0,
+      "same_skeleton_as_lod0": true
+    }
   },
   "animation_fbx": {
     "AN_Crab_Attack_Snap.fbx": {
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
       "frames": 33
     },
+    "AN_Crab_Claw_Snap.fbx": {
+      "objects": [
+        "ARMATURE"
+      ],
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
+      "top_bones": [
+        "root"
+      ],
+      "frames": 31
+    },
     "AN_Crab_Death.fbx": {
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -42,7 +122,8 @@
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -52,7 +133,8 @@
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -62,7 +144,8 @@
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -72,7 +155,8 @@
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -82,17 +166,52 @@
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
       "frames": 55
     },
+    "AN_Crab_Turn_Left.fbx": {
+      "objects": [
+        "ARMATURE"
+      ],
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
+      "top_bones": [
+        "root"
+      ],
+      "frames": 21
+    },
+    "AN_Crab_Turn_Right.fbx": {
+      "objects": [
+        "ARMATURE"
+      ],
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
+      "top_bones": [
+        "root"
+      ],
+      "frames": 21
+    },
+    "AN_Crab_Walk_Backward.fbx": {
+      "objects": [
+        "ARMATURE"
+      ],
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
+      "top_bones": [
+        "root"
+      ],
+      "frames": 25
+    },
     "AN_Crab_Walk_Forward.fbx": {
       "objects": [
         "ARMATURE"
       ],
-      "bones": 36,
+      "bones": 80,
+      "same_skeleton_as_mesh": true,
       "top_bones": [
         "root"
       ],
@@ -102,68 +221,123 @@
   "clips": {
     "Crab_Attack_Snap": {
       "frames": 33,
-      "mesh_min_z_cm": -0.016,
+      "mesh_min_z_cm": -0.037,
       "lowest_frame": 12,
-      "tip_min_z_cm": -0.0
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "foot_min_z_cm": -0.0
+    },
+    "Crab_Claw_Snap": {
+      "frames": 31,
+      "mesh_min_z_cm": -0.01,
+      "lowest_frame": 1,
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "foot_min_z_cm": -0.0
     },
     "Crab_Death": {
       "frames": 60,
-      "mesh_min_z_cm": -0.025,
+      "mesh_min_z_cm": -0.135,
       "lowest_frame": 6,
-      "tip_min_z_cm": -0.0
+      "ik_goals_match_feet_and_claws": 3e-05,
+      "foot_min_z_cm": -0.0
     },
     "Crab_Hit": {
       "frames": 21,
-      "mesh_min_z_cm": -0.027,
+      "mesh_min_z_cm": -0.152,
       "lowest_frame": 4,
-      "tip_min_z_cm": -0.0
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "foot_min_z_cm": -0.0
     },
     "Crab_Idle": {
       "frames": 91,
       "mesh_min_z_cm": -0.012,
       "lowest_frame": 13,
+      "ik_goals_match_feet_and_claws": 2e-05,
       "loop_seam_max_diff": 6.123234262925839e-17,
       "foot_slip_cm_per_frame": 0.0,
-      "planted_samples": 710,
-      "ground_speed_cm_s": 0.0,
-      "tip_min_z_cm": -0.0
+      "planted_samples": 701,
+      "foot_min_z_cm": -0.0
     },
     "Crab_Scuttle_Left": {
       "frames": 15,
-      "mesh_min_z_cm": -0.016,
-      "lowest_frame": 9,
+      "mesh_min_z_cm": -0.026,
+      "lowest_frame": 1,
+      "ik_goals_match_feet_and_claws": 2e-05,
       "loop_seam_max_diff": 0.0,
       "foot_slip_cm_per_frame": 0.0,
-      "planted_samples": 60,
+      "planted_samples": 58,
       "ground_speed_cm_s": 50.0,
-      "tip_min_z_cm": -0.0
+      "foot_min_z_cm": -0.0
     },
     "Crab_Scuttle_Right": {
       "frames": 15,
-      "mesh_min_z_cm": -0.015,
-      "lowest_frame": 1,
+      "mesh_min_z_cm": -0.023,
+      "lowest_frame": 8,
+      "ik_goals_match_feet_and_claws": 2e-05,
       "loop_seam_max_diff": 0.0,
       "foot_slip_cm_per_frame": 0.0,
-      "planted_samples": 60,
+      "planted_samples": 58,
       "ground_speed_cm_s": 50.0,
-      "tip_min_z_cm": -0.0
+      "foot_min_z_cm": -0.0
     },
     "Crab_Threat": {
       "frames": 55,
       "mesh_min_z_cm": -0.018,
       "lowest_frame": 16,
-      "tip_min_z_cm": -0.0
+      "ik_goals_match_feet_and_claws": 3e-05,
+      "foot_min_z_cm": -0.0
+    },
+    "Crab_Turn_Left": {
+      "frames": 21,
+      "mesh_min_z_cm": -0.011,
+      "lowest_frame": 7,
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "loop_seam_max_diff": 0.0,
+      "foot_slip_cm_per_frame": 0.0,
+      "planted_samples": 90,
+      "turn_deg_s": 60.0,
+      "foot_min_z_cm": -0.0
+    },
+    "Crab_Turn_Right": {
+      "frames": 21,
+      "mesh_min_z_cm": -0.011,
+      "lowest_frame": 17,
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "loop_seam_max_diff": 0.0,
+      "foot_slip_cm_per_frame": 0.0,
+      "planted_samples": 90,
+      "turn_deg_s": -60.0,
+      "foot_min_z_cm": -0.0
+    },
+    "Crab_Walk_Backward": {
+      "frames": 25,
+      "mesh_min_z_cm": -0.012,
+      "lowest_frame": 3,
+      "ik_goals_match_feet_and_claws": 2e-05,
+      "loop_seam_max_diff": 0.0,
+      "foot_slip_cm_per_frame": 0.0,
+      "planted_samples": 122,
+      "ground_speed_cm_s": 18.0,
+      "foot_min_z_cm": -0.0
     },
     "Crab_Walk_Forward": {
       "frames": 25,
       "mesh_min_z_cm": -0.012,
-      "lowest_frame": 17,
-      "loop_seam_max_diff": 1.9594348317873706e-16,
+      "lowest_frame": 8,
+      "ik_goals_match_feet_and_claws": 3e-05,
+      "loop_seam_max_diff": 0.0,
       "foot_slip_cm_per_frame": 0.0,
-      "planted_samples": 120,
+      "planted_samples": 116,
       "ground_speed_cm_s": 22.0,
-      "tip_min_z_cm": -0.0
+      "foot_min_z_cm": -0.0
     }
+  },
+  "procedural_demo": {
+    "frames": 105,
+    "speed_cm_s": 40.0,
+    "climb_cm": 14.0,
+    "planted_foot_error_cm": 0.0,
+    "planted_foot_slip_cm": 0.0,
+    "max_body_lowering_for_reach_cm": 0.0
   },
   "pass": true
 }

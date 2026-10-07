@@ -214,7 +214,7 @@ have 13,392, 6,024 and 3,420 and share the skeleton and the 2048 px colour, Dire
 
 ![crab](crab/Preview_Sheet.png)
 
-**Skeleton (80 bones, Unreal-style names).** 40 bones move the mesh: `root`, `body`, eye stalks, antennae,
+**Skeleton (80 bones, Unreal-style names).** `root` and 39 bones that carry the mesh: `body`, eye stalks, antennae,
 mouthparts, four bones per claw and three per leg (`leg1_upper_l` and so on). 40 helpers have no skin and exist for
 procedural animation and gameplay: a foot IK goal per leg (`ik_leg1_l`, under `ik_foot_root`), an ankle effector
 under each goal for Unreal's Two Bone IK, a knee pole per leg, foot contact points, claw IK goals, claw tips and

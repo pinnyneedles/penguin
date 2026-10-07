@@ -71,6 +71,7 @@ def parse():
     ap.add_argument("--size", type=int, default=360)
     ap.add_argument("--samples", type=int, default=12)
     ap.add_argument("--classic", default="", help="comma-separated clips to author with the previous motion")
+    ap.add_argument("--demo-only", action="store_true", help="only render Crab_Procedural_Terrain.gif")
     return ap.parse_args(argv)
 
 
@@ -823,7 +824,7 @@ def terrain_height(x, y):
             + 1.6 * math.sin(0.13 * x + 0.09 * y + 1.1) + 0.8 * math.sin(0.23 * y - 0.17 * x))
 
 
-def terrain_object(x0, x1, y0, y1, step=2.0):
+def terrain_object(x0, x1, y0, y1, step=2.5):
     nx, ny = int((x1 - x0) / step) + 1, int((y1 - y0) / step) + 1
     xs, ys = np.linspace(x0, x1, nx), np.linspace(y0, y1, ny)
     verts = [(x, y, terrain_height(x, y)) for y in ys for x in xs]
@@ -833,11 +834,12 @@ def terrain_object(x0, x1, y0, y1, step=2.0):
     ob = bpy.data.objects.new("Procedural demo terrain", me)
     mat = bpy.data.materials.new("Demo sand"); mat.use_nodes = True
     nt = mat.node_tree; bsdf = nt.nodes["Principled BSDF"]
-    noise = nt.nodes.new("ShaderNodeTexNoise"); noise.inputs["Scale"].default_value = 0.08
+    noise = nt.nodes.new("ShaderNodeTexNoise"); noise.inputs["Scale"].default_value = 0.6; noise.inputs["Detail"].default_value = 6
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.30, 0.25, 0.18, 1); ramp.color_ramp.elements[1].color = (0.58, 0.50, 0.38, 1)
+    ramp.color_ramp.elements[0].position = 0.35; ramp.color_ramp.elements[1].position = 0.65
+    ramp.color_ramp.elements[0].color = (0.16, 0.13, 0.09, 1); ramp.color_ramp.elements[1].color = (0.34, 0.28, 0.20, 1)
     nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"]); nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.92
+    bsdf.inputs["Roughness"].default_value = 0.95
     me.materials.append(mat)
     bpy.context.scene.collection.objects.link(ob)
     return ob
@@ -867,7 +869,10 @@ def procedural_demo(R, out_dir, nframes=105, speed=40.0, P=15, duty=0.6, lift=5.
     for o in bpy.data.objects:
         if o.name == "Studio floor": o.hide_render = True
     x_start = -0.5 * speed * (nframes - 1) / FPS
-    terr = terrain_object(x_start - 90, -x_start + 90, -90, 110)
+    terr = terrain_object(x_start - 200, -x_start + 240, -260, 340)
+    sun = bpy.data.objects.new("Demo sun", bpy.data.lights.new("Demo sun", "SUN"))   # low, raking: shows the relief
+    sun.data.energy = 2.2; sun.data.angle = math.radians(3); sun.data.color = (1.0, 0.93, 0.82)
+    sun.rotation_euler = Euler((math.radians(68), 0, math.radians(-35)), "XYZ"); bpy.context.scene.collection.objects.link(sun)
     Pd = P / FPS
     off = {k: (0.0 if k in GROUP_A else 0.5) + METACHRONAL * (k[1] - 1) for k in LEGS}
     body_x = lambda t: x_start + speed * t
@@ -937,7 +942,7 @@ def procedural_demo(R, out_dir, nframes=105, speed=40.0, P=15, duty=0.6, lift=5.
             p = os.path.join(out_dir, f"terrain_{fr + 1:03d}.png"); sc.render.filepath = p
             bpy.ops.render.render(write_still=True); paths.append(p)
     rig.matrix_world = Matrix.Identity(4)
-    bpy.data.objects.remove(terr)
+    bpy.data.objects.remove(terr); bpy.data.objects.remove(sun)
     for o in bpy.data.objects:
         if o.name == "Studio floor": o.hide_render = False
     stats = dict(frames=nframes, speed_cm_s=speed, climb_cm=round(terrain_height(body_x((nframes - 1) / FPS), 0) - terrain_height(x_start, 0), 1),
@@ -1017,8 +1022,8 @@ def rig_diagram(R, path):
     views = {"top": (lambda v: (470 - v.x * sc, 560 + v.y * sc)), "front": (lambda v: (1330 + v.x * sc, 620 - v.z * sc))}
     helper = lambda b: b.startswith(("ik_", "pole_", "claw_tip", "claw_pinch")) or "_end_" in b
     nh = sum(map(helper, R.bones))
-    dr.text((30, 20), f"Crab skeleton: {len(R.bones)} bones ({len(R.bones) - nh} skinned, {nh} helpers for IK and procedural "
-                      "animation)", fill=(30, 30, 30), font=big)
+    dr.text((30, 20), f"Crab skeleton: {len(R.bones)} bones (root, {len(R.bones) - nh - 1} that carry the mesh, {nh} helpers "
+                      "for IK and procedural animation)", fill=(30, 30, 30), font=big)
     dr.text((300, 75), "Top view (crab facing up the page)", fill=(60, 60, 60), font=font)
     dr.text((1180, 75), "Front view (looking at the crab's face)", fill=(60, 60, 60), font=font)
     head = lambda b: R.rest[b].translation
@@ -1104,6 +1109,12 @@ def load(blend):
 def main():
     a = parse()
     R = load(a.blend); rig = R.rig
+    if a.demo_only:
+        sc = bpy.context.scene
+        sc.render.resolution_x = sc.render.resolution_y = a.size; sc.cycles.samples = a.samples
+        paths, demo = procedural_demo(R, os.path.join(a.out, "_anim_frames"))
+        json.dump(demo, open(os.path.join(a.out, "procedural_demo.json"), "w"), indent=2)
+        return gif(paths, os.path.join(a.out, "Crab_Procedural_Terrain.gif"), 30)
     classic = set(c for c in a.classic.split(",") if c)
     clips = make_clips(R, classic)
     if a.pose_test:
