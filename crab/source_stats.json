@@ -1,0 +1,75 @@
+{
+  "vertices": 17684,
+  "triangles": 35064,
+  "bones": 36,
+  "material_slots": [
+    "M_Crab_Shell",
+    "M_Crab_Eye"
+  ],
+  "uv_layers": 1,
+  "texture_px": 2048,
+  "texels_per_cm": 14.57,
+  "max_weight_influences": 1,
+  "invalid_weight_vertices": 0,
+  "bounds_cm": {
+    "min": [
+      -48.1,
+      -52.9,
+      -0.0
+    ],
+    "max": [
+      48.1,
+      30.6,
+      28.0
+    ]
+  },
+  "size_cm": {
+    "span_x": 96.1,
+    "length_y": 83.6,
+    "height": 28.0
+  },
+  "carapace_cm": {
+    "width": 63.5
+  },
+  "claws": "right: heavy crusher, 32% larger; left: slimmer cutter",
+  "fps": 30,
+  "blender_version": "5.0.1",
+  "control_rig": {
+    "legs": {
+      "leg1.L": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg2.L": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg3.L": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg4.L": {
+        "pole_angle_deg": -90.04,
+        "rest_error_deg": 0.0
+      },
+      "leg1.R": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg2.R": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg3.R": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      },
+      "leg4.R": {
+        "pole_angle_deg": -90.02,
+        "rest_error_deg": 0.0
+      }
+    },
+    "foot_follow_error_cm": 0.0508,
+    "note": "IK_foot*: drag to place a foot; POLE_knee*: knee direction; other bones are FK"
+  }
+}

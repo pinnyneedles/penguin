@@ -25,8 +25,8 @@ that scuttles, threatens, pinches, flinches and dies in your level. Plan on abou
 
 | | |
 |---|---|
-| Size | 63.5 cm across the shell, 97 cm leg tip to leg tip, 78 cm from claw tips to back legs, 32 cm tall. Pebble Chick is 152 cm tall, so the crab comes up to about its knee |
-| Triangles | 33,336, two material slots (`M_Crab_Shell`, `M_Crab_Eye`) |
+| Size | 63.5 cm across the shell, 96 cm leg tip to leg tip, 84 cm from claw tips to back legs, 28 cm tall. Pebble Chick is 152 cm tall, so the crab comes up to about its knee |
+| Triangles | 35,064, two material slots (`M_Crab_Shell`, `M_Crab_Eye`) |
 | Skeleton | 36 bones, top bone `root`: `body`, two eye stalks, four bones per claw, three per leg |
 | Skinning | Rigid. Every piece of shell follows exactly one bone, as on a real crab, so nothing stretches |
 | Claws | A heavy crusher claw on the right (32% bigger, with blunt molars) and a slimmer cutter on the left (fine sharp teeth), like many real crabs |
@@ -65,7 +65,7 @@ In the Content Browser create `Content/Characters/Crab` with four sub-folders:
 3. Click **Import**. You get `SK_Crab`, `SK_Crab_Skeleton` and `SK_Crab_PhysicsAsset` (names can vary slightly
     by version).
 4. **Check it.** Open the skeletal mesh:
-    - The crab should stand on the grid, about 32 cm tall and 97 cm across the legs. If it is tiny or 100 times
+    - The crab should stand on the grid, about 28 cm tall and 96 cm across the legs. If it is tiny or 100 times
       too big, re-import with the scale at 1.0 and Convert Scene Unit on.
     - In the Skeleton Tree, the top bone should be `root` with `body` below it. If you see an extra bone called
       `Armature` above `root`, re-import the mesh.
@@ -172,15 +172,16 @@ the idle's first pose, and every one except Death also ends there.
 
 ## Step 8: Gameplay tips
 
-- **Attack range.** On the hit notify, the pincer tips are about ATTACK_REACH cm in front of the crab's centre and
-  ATTACK_HEIGHT cm above the ground. A sphere overlap of radius 25 at that point catches a penguin standing in front.
+- **Attack range.** On the hit notify, the pincer tips are about 58 cm in front of the crab's centre and 9 cm above
+  the ground, right at a penguin's feet. A sphere overlap of radius 25 at that point catches a penguin standing in front.
+  The exact positions are in `Reference/anim_events.json`.
 - **Threat then attack.** A nice pattern: when the penguin comes within 3 m, play Crab_Threat once, then scuttle
   toward it. Within 60 cm, play Crab_Attack_Snap and wait for the montage to end before the next attack.
 - **Getting hit.** Play Crab_Hit as a montage. It is short (0.67 s), so the crab can recover and keep chasing.
 - **Death.** Set `IsDead`, stop movement, and set the capsule to ignore pawns so the penguin can walk past the
   upturned crab. The body ends lying on its back, centred near where it stood.
 - **Variety.** Scale the actor between 0.6 and 1.4 for small and big crabs. Multiply the walk speeds by the same scale.
-- **LODs.** At 33k triangles one crab is cheap. For a beach full of crabs, add LODs in **LOD Settings** (for example
+- **LODs.** At 35k triangles one crab is cheap. For a beach full of crabs, add LODs in **LOD Settings** (for example
   50%, 25% and 12% triangle targets). Rigid skinning keeps LODs clean.
 
 ## Troubleshooting

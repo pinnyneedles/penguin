@@ -197,3 +197,55 @@ collectible. **Download for Unreal:** [`dist/PenguinKit_Unreal.zip`](dist/Pengui
 to rebuild.
 
 ![kit vignette](props/Kit/Previews/Kit_Vignette.png)
+
+## Crab (rigged enemy)
+
+**Download for Unreal:** [`dist/Crab_Unreal.zip`](dist/Crab_Unreal.zip) has the skeletal mesh and skeleton, eight
+animations, the textures, reference data, previews and the Blender sources. Its `IMPORT_GUIDE.html` walks through
+importing into Unreal Engine 5 and setting up the Character and Animation Blueprints for an enemy that strafes. The
+guide's source is `crab/IMPORT_GUIDE.md`, and `python3 tools/package_crab_unreal.py` rebuilds the zip.
+
+`crab/` is a red crab built from rigid shell pieces, one bone each, as on a real crab, with ball joints hidden in
+the hinges. It has a 36-bone skeleton (`root`, `body`, two eye stalks, four bones per claw, three per leg),
+and is 63.5 cm across the shell, 96 cm across the legs and 28 cm tall, with 35,064 triangles in two material
+slots. It has a heavy crusher claw on the right and a slimmer cutter on the left. The colour,
+DirectX normal and ORM maps (with baked ambient occlusion) share one 2048 px atlas.
+
+![crab](crab/Preview_Sheet.png)
+
+| Clip | Frames | Loops | What it does |
+|---|---|---|---|
+| Crab_Idle | 91 | yes | breathing, eye stalks look around, a claw snip, a back leg shuffles |
+| Crab_Scuttle_Left / Right | 15 | yes | sideways run; planted feet match 50 cm/s |
+| Crab_Walk_Forward | 25 | yes | slow forward walk; planted feet match 22 cm/s |
+| Crab_Threat | 55 | no | rears up, claws raised wide and open, two snaps |
+| Crab_Attack_Snap | 33 | no | wind-up, lunge and double pinch (hit on frame 13) |
+| Crab_Hit | 21 | no | flinch: knocked back, eyes fold, claws tucked |
+| Crab_Death | 60 | no | curls up, flips onto its back, legs twitch, then still |
+
+![scuttle](crab/Crab_Scuttle_Travel.gif)
+
+The legs use an exact two-bone IK with the tip leaning outward, so planted feet never slide: `tools/verify_crab.py`
+measures 0.0 cm of foot slip at the stated speeds, seamless loops and no part of the crab below the ground, and
+re-imports every FBX (results in `crab/anim_validation.json`). `crab/Crab.blend` also has a posing rig for
+animators: drag an `IK_foot` control and the leg follows, with a `POLE_knee` control for the knee.
+
+The model went through three design passes after an independent critique. Each change was kept only if it won blind
+side-by-side reviews: three reviewers per round, left and right randomised, and adopted only when at least two picked
+it and none preferred the older version with medium or high confidence. The second pass (lower stance, crusher and
+cutter claws, a darker matte shell, bigger eyes, a tail flap underneath) beat the first on overall look, claws, shell,
+eyes and underside. Its longer legs lost, so the legs were reworked: shorter, with the knees swept forward on the front
+pairs and back on the rear pairs. That version beat the original legs 3 to 0 (two with high confidence) and the second
+version overall 3 to 0. Two defects the reviewers spotted were then fixed: a crease at the top of the shell and peach
+patches on the claw joints.
+
+To change the crab, edit `tools/crab_geometry.py` (proportions, outline, legs, claws, eyes) or
+`tools/crab_textures.py` (colours and surface detail), then rebuild:
+
+```
+pip install bpy numpy scipy pillow markdown
+python3 tools/build_crab.py --out crab
+python3 tools/make_crab_anims.py --blend crab/Crab.blend --out crab
+python3 tools/verify_crab.py crab
+python3 tools/package_crab_unreal.py
+```

@@ -79,16 +79,18 @@ def relief(x, y):
     return h - 0.25 * np.exp(-(d / 1.0) ** 2) + brow
 
 
-def dome(th_deg):
+def dome(th_deg, s=1.0):
+    """Top height and underside depth. The front of the dome is lower, fading in from the centre so the
+    surface stays smooth at the top pole."""
     front = np.maximum(0.0, -np.sin(np.radians(th_deg)))
-    return 10.5 - 2.4 * front ** 2, 6.0           # top height, underside depth
+    return 10.5 - 2.4 * front ** 2 * smoothstep(0.0, 1.0, s), 6.0
 
 
 def carapace_point(th_deg, s, top=True):
     R = rim_radius(th_deg, s)
     t = np.radians(th_deg)
     x, y = s * R * np.cos(t), s * R * np.sin(t)
-    ht, hb = dome(th_deg)
+    ht, hb = dome(th_deg, s)
     q = np.clip(1 - s * s, 0, 1)
     if top:
         z = ht * q ** 0.55 + relief(x, y) * smoothstep(1.0, 0.72, s)
@@ -306,9 +308,9 @@ def skeleton():
 # ---------------------------------------------------------------------------
 # Mesh parts
 # ---------------------------------------------------------------------------
-def carapace_part(n=144, kt=16, kb=10):
+def carapace_part(n=144, kt=22, kb=10):
     th = np.linspace(-180, 180, n, endpoint=False)
-    s_top = 1 - (1 - np.arange(1, kt + 1) / kt) ** 1.8           # ring 1 .. rim (s = 1)
+    s_top = 0.5 - 0.5 * np.cos(np.pi * (np.arange(1, kt + 1) / kt) ** 0.85)   # ring 1 .. rim (s = 1), dense at both ends
     s_bot = (1 - (1 - np.arange(1, kb) / kb) ** 1.5)[::-1]        # just inside the rim .. near the centre
     verts = [carapace_point(0, 0.0, True)]
     vt = [0.0]
@@ -438,9 +440,8 @@ def claw_parts(side, s):
                       radial=teeth_d, tile=tl("claw_pincer"), power=2.3))
     parts.append(sphere(f"Claw shoulder joint.{side}", f"claw_arm.{side}", P0 + UP * 0.8, 2.9 * k, "joint_hip",
                         kind="joint_hip", owner=False))
-    parts.append(sphere(f"Claw elbow joint.{side}", f"claw_wrist.{side}", E, 3.3 * k, "joint", owner=False))
-    parts.append(sphere(f"Claw wrist joint.{side}", f"claw_hand.{side}", W, 3.4 * k, "joint", owner=False))
-    parts.append(sphere(f"Claw hinge joint.{side}", f"claw_pincer.{side}", Hh, 1.8 * k, "joint", owner=False))
+    for nm, b, c, r in (("elbow", "claw_wrist", E, 3.3), ("wrist", "claw_hand", W, 3.4), ("hinge", "claw_pincer", Hh, 1.8)):
+        parts.append(sphere(f"Claw {nm} joint.{side}", f"{b}.{side}", c, r * k, "joint_hip", kind="joint_hip", owner=False))
     return parts
 
 
@@ -450,7 +451,7 @@ def eye_parts(side, s):
     return [loft(f"Eye stalk.{side}", f"eye.{side}", segment_center(base, tip, 1.5, 0.0), [0, 1, 0],
                  lambda t: (1.75 - 0.3 * t) * envelope(t, 0.1, 0.05), lambda t: (1.6 - 0.25 * t) * envelope(t, 0.1, 0.05),
                  end_samples(7, 0.1, 0.05, 2), n=12, tile="eye_stalk", owner=owner),
-            sphere(f"Eye socket.{side}", f"eye.{side}", base + d * 0.4, 2.3, "joint", owner=False),
+            sphere(f"Eye socket.{side}", f"eye.{side}", base + d * 0.4, 2.3, "joint_hip", kind="joint_hip", owner=False),
             sphere(f"Eye.{side}", f"eye.{side}", tip + d * 1.7, 3.2, "eyeball", kind="eyeball", mat="eye",
                    owner=owner, n=20, k=5, axis=d, stretch=1.12)]
 

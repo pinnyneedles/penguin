@@ -1,0 +1,102 @@
+{
+  "fps": 30,
+  "scuttle_speed_cm_s": 50.0,
+  "walk_speed_cm_s": 22.0,
+  "clips": {
+    "Crab_Idle": {
+      "frames": 91,
+      "loop": true,
+      "min_z": -0.012
+    },
+    "Crab_Scuttle_Left": {
+      "frames": 15,
+      "loop": true,
+      "min_z": -0.016
+    },
+    "Crab_Scuttle_Right": {
+      "frames": 15,
+      "loop": true,
+      "min_z": -0.015
+    },
+    "Crab_Walk_Forward": {
+      "frames": 25,
+      "loop": true,
+      "min_z": -0.012
+    },
+    "Crab_Threat": {
+      "frames": 55,
+      "loop": false,
+      "min_z": -0.018
+    },
+    "Crab_Attack_Snap": {
+      "frames": 33,
+      "loop": false,
+      "min_z": -0.016
+    },
+    "Crab_Hit": {
+      "frames": 21,
+      "loop": false,
+      "min_z": -0.027
+    },
+    "Crab_Death": {
+      "frames": 60,
+      "loop": false,
+      "min_z": -0.025
+    }
+  },
+  "events": {
+    "Crab_Scuttle_Left": {
+      "footsteps": [
+        1,
+        8
+      ]
+    },
+    "Crab_Scuttle_Right": {
+      "footsteps": [
+        1,
+        8
+      ]
+    },
+    "Crab_Walk_Forward": {
+      "footsteps": [
+        1,
+        13
+      ]
+    },
+    "Crab_Threat": {
+      "snap": [
+        22,
+        34
+      ]
+    },
+    "Crab_Attack_Snap": {
+      "hit": [
+        13
+      ]
+    },
+    "Crab_Death": {
+      "land": [
+        25
+      ]
+    }
+  },
+  "attack": {
+    "hit_frame": 13,
+    "pincer_tips_cm": [
+      [
+        3.4,
+        -53.2,
+        9.4
+      ],
+      [
+        -6.6,
+        -62.5,
+        8.0
+      ]
+    ],
+    "reach_forward_cm": 57.8,
+    "height_cm": 8.7,
+    "note": "Forward is the crab's facing direction, measured from the root (the actor's origin)."
+  },
+  "notes": "Frame numbers are 1-based. Locomotion clips are in place; move the capsule at the listed speed."
+}

@@ -142,7 +142,7 @@ ORANGE = np.array([0.46, 0.06, 0.012])
 CREAM = np.array([0.66, 0.46, 0.25])
 PALE = np.array([0.62, 0.26, 0.11])
 JOINT = np.array([0.30, 0.05, 0.02])
-KNUCKLE = np.array([0.52, 0.17, 0.06])
+KNUCKLE = np.array([0.34, 0.085, 0.035])
 TIP = np.array([0.016, 0.011, 0.010])
 EYE = np.array([0.008, 0.007, 0.008])
 
@@ -210,7 +210,7 @@ def paint(attr, kind, groove_fn, rim_s_fn, rng_seed=7):
         if not m.any(): continue
         top = mix(RED, ORANGE, 0.08 + 0.22 * mott[m]) * (0.85 + 0.2 * mott[m, None])
         band = np.maximum(smoothstep(0.16, 0.04, t[m]), smoothstep(0.84, 0.96, t[m]))
-        top = mix(top, PALE, band * 0.45)                         # paler knuckles at both ends
+        top = mix(top, PALE, band * 0.3)                          # paler knuckles at both ends
         base = mix(CREAM, top, dorsal[m])
         if kname == "leg_tip":
             base = mix(base, TIP, smoothstep(0.45, 0.85, t[m]))
@@ -224,7 +224,7 @@ def paint(attr, kind, groove_fn, rim_s_fn, rng_seed=7):
         m = K[kname]
         if not m.any(): continue
         top = mix(RED, ORANGE, 0.08 + 0.22 * mott[m]) * (0.85 + 0.2 * mott[m, None])
-        pale = mix(CREAM, ORANGE * 0.75, 0.45)                    # claws are only a little paler underneath
+        pale = mix(RED, ORANGE * 0.8, 0.55)                       # claws are only a little paler underneath
         base = mix(pale, top, smoothstep(-0.85, -0.15, np.sum(Nn[m] * outdir[m], 1)))
         dens = 0.0045 if kname == "claw_hand" else 0.0025
         w = rng.random(m.sum()) < 0.6 * dens * smoothstep(-0.2, 0.5, Nn[m, 2]) * (t[m] < black0)
