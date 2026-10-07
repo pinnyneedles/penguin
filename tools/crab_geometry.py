@@ -32,6 +32,33 @@ def mirror(p, s):
     return p
 
 
+def bn(name, side):
+    """Unreal-style bone name: ("leg1_upper", "L") -> "leg1_upper_l"."""
+    return f"{name}_{side.lower()}"
+
+
+# Levels of detail: the same parts at lower resolution. All levels share one UV layout and texture atlas.
+LOD_TABLE = {0: dict(around=1.0, rings=1.0, carapace=(144, 22, 10), sphere=(12, 3)),
+             1: dict(around=0.7, rings=0.6, carapace=(80, 13, 6), sphere=(8, 1)),
+             2: dict(around=0.5, rings=0.4, carapace=(56, 9, 4), sphere=(6, 1)),
+             3: dict(around=0.36, rings=0.25, carapace=(40, 6, 3), sphere=(5, 1))}
+LOD = dict(LOD_TABLE[0])
+
+
+def set_lod(level):
+    LOD.clear(); LOD.update(LOD_TABLE[level])
+
+
+def na(n):
+    """Points around a section at the current level of detail (even, at least 4)."""
+    return max(4, int(round(n * LOD["around"] / 2)) * 2)
+
+
+def nr(n, lo=2):
+    """Rings along a part at the current level of detail."""
+    return max(lo, int(round(n * LOD["rings"])))
+
+
 # ---------------------------------------------------------------------------
 # Carapace: outline, dome, underside and surface relief
 # ---------------------------------------------------------------------------
@@ -191,7 +218,8 @@ def spline_center(pts):
     return lambda t: cs(t)
 
 
-def sphere(name, bone, c, r, tile, kind="joint", mat="shell", owner=True, n=12, k=3, axis=(0, 0, 1), stretch=1.0):
+def sphere(name, bone, c, r, tile, kind="joint", mat="shell", owner=True, n=None, k=None, axis=(0, 0, 1), stretch=1.0):
+    n = n or LOD["sphere"][0]; k = k or LOD["sphere"][1]
     ax = nrm(axis)
     L = r * stretch
     center = segment_center(np.asarray(c) - ax * L, np.asarray(c) + ax * L)
@@ -273,6 +301,16 @@ def claw_rest(s, side):
     return dict(P0=P0, E=at(E), W=at(W), Hh=at(Hh), F_tip=at(F_tip), D_tip=at(D_tip), zh=zh, hdir=hdir, k=k)
 
 
+def antenna_rest(s):
+    a = carapace_point(-84.5 if s > 0 else -95.5, 0.98, top=True) - np.array([0, 0, 0.6])
+    return a, a + np.array([3.0 * s, -5.6, 2.4])
+
+
+def mouth_rest(s):
+    top = C + np.array([1.85 * s, -15.0, -1.6])
+    return top, top + np.array([0.0, -1.1, -4.6])
+
+
 def eye_rest(s):
     th = -71 if s > 0 else -109
     base = carapace_point(th, 0.93, top=True) - np.array([0, 0, 1.0])
@@ -280,19 +318,49 @@ def eye_rest(s):
     return base, base + d * 8.5, d
 
 
+HELPER_PREFIXES = ("ik_", "pole_")
+HELPER_KEYS = ("_end_", "claw_tip_", "claw_pinch_")
+
+
+def is_helper(name):
+    """Bones with no skin: IK goals, pole targets, contact and attachment points."""
+    return name.startswith(HELPER_PREFIXES) or any(k in name for k in HELPER_KEYS)
+
+
 def skeleton():
-    """[(name, head, tail, z_axis, parent)] for the rest pose; z_axis sets the bone roll."""
+    """[(name, head, tail, z_axis, parent)] for the rest pose; z_axis sets the bone roll.
+
+    Skinned bones: root, body, eye_l/r, antenna_l/r, mouthpart_l/r, claw_arm/wrist/hand/pincer_l/r and
+    leg1-4_upper/lower/tip_l/r. Helper bones (no skin) for procedural animation and gameplay:
+      legN_end_l/r     the foot contact point at the tip of each leg (child of legN_tip)
+      pole_legN_l/r    knee pole target for two-bone IK (child of body)
+      ik_foot_root, ik_legN_l/r     foot IK goals, animated in every clip to follow legN_end (child of root)
+      ik_legN_ankle_l/r   child of ik_legN placed and oriented like legN_tip: the Two Bone IK effector, so
+                          the tip segment lands with its end exactly on ik_legN
+      claw_tip_l/r     tip of the moving finger; claw_pinch_l/r where the fingers close (hit point)
+      ik_claw_root, ik_claw_l/r     claw IK goals, animated to follow claw_tip
+    """
     B = [("root", (0, 0, 0), (0, 0, 12), FWD, None), ("body", C, C + [0, 0, 10], FWD, "root")]
+    helpers = []
     for side, s in SIDES:
         base, tip, d = eye_rest(s)
-        B.append((f"eye.{side}", base, tip, nrm(FWD - d * np.dot(d, FWD)), "body"))
+        B.append((bn("eye", side), base, tip, nrm(FWD - d * np.dot(d, FWD)), "body"))
+        a0, a1 = antenna_rest(s); da = nrm(a1 - a0)
+        B.append((bn("antenna", side), a0, a1, nrm(UP - da * np.dot(da, UP)), "body"))
+        m0, m1 = mouth_rest(s); dm = nrm(m1 - m0)
+        B.append((bn("mouthpart", side), m0, m1, nrm(FWD - dm * np.dot(dm, FWD)), "body"))
         c = claw_rest(s, side)
         chain = [("claw_arm", c["P0"], c["E"]), ("claw_wrist", c["E"], c["W"]), ("claw_hand", c["W"], c["Hh"]),
                  ("claw_pincer", c["Hh"], c["D_tip"])]
-        parent = "body"
+        parent = "body"; zs = {}
         for nm, h, t in chain:
-            y = nrm(t - h); x = nrm(np.cross(UP, y)); z = np.cross(x, y)
-            B.append((f"{nm}.{side}", h, t, z, parent)); parent = f"{nm}.{side}"
+            y = nrm(t - h); x = nrm(np.cross(UP, y)); z = np.cross(x, y); zs[nm] = z
+            B.append((bn(nm, side), h, t, z, parent)); parent = bn(nm, side)
+        dt = nrm(c["D_tip"] - c["Hh"])
+        grip = (c["F_tip"] + c["D_tip"]) / 2 - c["hdir"] * 2.0 * c["k"]
+        helpers += [(bn("claw_tip", side), c["D_tip"], c["D_tip"] + dt * 2.0, zs["claw_pincer"], bn("claw_pincer", side)),
+                    (bn("claw_pinch", side), grip, grip + c["hdir"] * 2.0, zs["claw_hand"], bn("claw_hand", side)),
+                    (bn("ik_claw", side), c["D_tip"], c["D_tip"] + dt * 2.0, zs["claw_pincer"], "ik_claw_root")]
         for i in range(4):
             H, K, D, T, out_h = leg_rest(i, s)
             u = nrm(D - H); w = nrm((K - H) - u * np.dot(K - H, u))
@@ -301,48 +369,70 @@ def skeleton():
             parent = "body"
             for nm, h, t in ((f"leg{i + 1}_upper", H, K), (f"leg{i + 1}_lower", K, D), (f"leg{i + 1}_tip", D, T)):
                 y = nrm(t - h); x = nrm(n - y * np.dot(n, y))
-                B.append((f"{nm}.{side}", h, t, np.cross(x, y), parent)); parent = f"{nm}.{side}"
+                B.append((bn(nm, side), h, t, np.cross(x, y), parent)); parent = bn(nm, side)
+            y = nrm(T - D); x = nrm(n - y * np.dot(n, y)); z = np.cross(x, y)
+            Pp = K + w * 14.0
+            helpers += [(bn(f"leg{i + 1}_end", side), T, T + y * 2.5, z, bn(f"leg{i + 1}_tip", side)),
+                        (bn(f"ik_leg{i + 1}", side), T, T + y * 2.5, z, "ik_foot_root"),
+                        (bn(f"ik_leg{i + 1}_ankle", side), D, T, z, bn(f"ik_leg{i + 1}", side)),
+                        (bn(f"pole_leg{i + 1}", side), Pp, Pp + w * 4.0, nrm(FWD - w * np.dot(w, FWD)), "body")]
+    B += [("ik_foot_root", (0, 0, 0), (0, 0, 6), FWD, "root"), ("ik_claw_root", (0, 0, 0), (0, 0, 6), FWD, "root")]
+    B += helpers
     return [(n, np.asarray(h, float), np.asarray(t, float), np.asarray(z, float), p) for n, h, t, z, p in B]
 
 
 # ---------------------------------------------------------------------------
 # Mesh parts
 # ---------------------------------------------------------------------------
-def carapace_part(n=144, kt=22, kb=10):
+_ARC = {}
+
+
+def _arc(th, top):
+    """Arc length from the pole along the top (or underside) at angles th, as a function of s: (s grid, table)."""
+    fine = np.linspace(0.0, 1.0, 321)
+    pts = np.array([carapace_point(th, sv, top) for sv in fine])            # (321, n, 3)
+    acc = np.concatenate([np.zeros((1, len(th))), np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=2), 0)])
+    return fine, acc
+
+
+def _arc_max():
+    if "max" not in _ARC:
+        th = np.linspace(-180, 180, 720, endpoint=False)
+        _ARC["max"] = max(_arc(th, True)[1][-1].max(), _arc(th, False)[1][-1].max())
+    return _ARC["max"]
+
+
+def carapace_part():
+    n, kt, kb = LOD["carapace"]
     th = np.linspace(-180, 180, n, endpoint=False)
     s_top = 0.5 - 0.5 * np.cos(np.pi * (np.arange(1, kt + 1) / kt) ** 0.85)   # ring 1 .. rim (s = 1), dense at both ends
     s_bot = (1 - (1 - np.arange(1, kb) / kb) ** 1.5)[::-1]        # just inside the rim .. near the centre
     verts = [carapace_point(0, 0.0, True)]
     vt = [0.0]
     rings = []
-    for s in s_top:
+    for sv in s_top:
         rings.append(list(range(len(verts), len(verts) + n)))
-        verts.extend(carapace_point(th, s, True)); vt.extend([s] * n)
-    for s in s_bot:
+        verts.extend(carapace_point(th, sv, True)); vt.extend([sv] * n)
+    for sv in s_bot:
         rings.append(list(range(len(verts), len(verts) + n)))
-        verts.extend(carapace_point(th, s, False)); vt.extend([-s] * n)
+        verts.extend(carapace_point(th, sv, False)); vt.extend([-sv] * n)
     verts.append(carapace_point(0, 0.0, False)); vt.append(-0.0)
     verts = np.array(verts); last = len(verts) - 1
-    # UVs: polar, by arc length from each pole; the top and the underside are separate islands
-    top_idx = [0] + [r for r in rings[:kt]]
-    bot_idx = [last] + [r for r in rings[kt - 1:][::-1]]
-    def polar(idx_rings):
-        arc = np.zeros((len(idx_rings) - 1, n))
-        prev = np.repeat(verts[idx_rings[0]][None], n, 0)
-        acc = np.zeros(n)
-        for i, ring in enumerate(idx_rings[1:]):
-            cur = verts[ring]; acc = acc + np.linalg.norm(cur - prev, axis=1); arc[i] = acc; prev = cur
-        return arc
-    arc_t, arc_b = polar(top_idx), polar(bot_idx)
-    Lmax = max(arc_t.max(), arc_b.max())
+    # UVs: polar, by arc length from each pole (from a fine table, so every level of detail maps identically);
+    # the top and the underside are separate islands
+    Lmax = _arc_max()
+    fine, acc_t = _arc(th, True); _, acc_b = _arc(th, False)
     ang = np.radians(th)
     uv = {}
+    s_rings_bot = [1.0] + list(s_bot)                                        # underside rings from the rim inward
     for i, ring in enumerate(rings[:kt]):
         for j, vi in enumerate(ring):
-            uv[("t", vi)] = (0.5 + 0.5 * arc_t[i, j] / Lmax * math.cos(ang[j]), 0.5 + 0.5 * arc_t[i, j] / Lmax * math.sin(ang[j]))
-    for i, ring in enumerate(rings[kt - 1:][::-1]):
+            r = np.interp(s_top[i], fine, acc_t[:, j]) / Lmax
+            uv[("t", vi)] = (0.5 + 0.5 * r * math.cos(ang[j]), 0.5 + 0.5 * r * math.sin(ang[j]))
+    for i, ring in enumerate(rings[kt - 1:]):
         for j, vi in enumerate(ring):
-            uv[("b", vi)] = (0.5 - 0.5 * arc_b[i, j] / Lmax * math.cos(ang[j]), 0.5 + 0.5 * arc_b[i, j] / Lmax * math.sin(ang[j]))
+            r = np.interp(s_rings_bot[i], fine, acc_b[:, j]) / Lmax
+            uv[("b", vi)] = (0.5 - 0.5 * r * math.cos(ang[j]), 0.5 + 0.5 * r * math.sin(ang[j]))
     uv[("t", 0)] = (0.5, 0.5); uv[("b", last)] = (0.5, 0.5)
     faces, fuv, ftile = [], [], []
     def add(face, island):
@@ -369,25 +459,25 @@ def leg_parts(i, side, s):
     H, K, D, T, out_h = leg_rest(i, s)
     owner = side == "L"
     tile = lambda seg: f"leg{i + 1}_{seg}"
-    bone = lambda seg: f"leg{i + 1}_{seg}.{side}"
+    bone = lambda seg: bn(f"leg{i + 1}_{seg}", side)
     q = (LEGS[i]["L"][0] / 15.0) ** 0.5
     rin = lambda t: nrm(-out_h * 0.8 - UP * 0.6)               # bottom of the section faces in and down
     # Crab legs are flat paddles: wide seen from above, thin seen from the side
     parts = [loft(f"Leg{i + 1} upper.{side}", bone("upper"), segment_center(H, K, 1.8, 0.9), -UP,
                   lambda t: 2.0 * q * (1.0 - 0.12 * t) * cuff(t) * envelope(t, 0.08, 0.07),
                   lambda t: 3.4 * q * (1.0 - 0.15 * t) * cuff(t) * envelope(t, 0.08, 0.07),
-                  end_samples(11, 0.08, 0.07, 3), n=16, tile=tile("upper"), owner=owner, power=2.4,
+                  end_samples(nr(11), 0.08, 0.07, nr(3, 1)), n=na(16), tile=tile("upper"), owner=owner, power=2.4,
                   radial=lambda t, a: 0.3 * q * max(0.0, math.cos(a - math.pi)) ** 10 * (0.15 < t < 0.82)),
              loft(f"Leg{i + 1} lower.{side}", bone("lower"), segment_center(K, D, 0.9, 0.7), rin,
                   lambda t: 1.75 * q * (1.0 - 0.2 * t) * cuff(t) * envelope(t, 0.07, 0.07),
                   lambda t: 2.7 * q * (1.0 - 0.22 * t) * cuff(t) * envelope(t, 0.07, 0.07),
-                  end_samples(11, 0.07, 0.07, 3), n=16, tile=tile("lower"), owner=owner, power=2.3)]
+                  end_samples(nr(11), 0.07, 0.07, nr(3, 1)), n=na(16), tile=tile("lower"), owner=owner, power=2.3)]
     sweep = nrm(FWD - out_h * np.dot(FWD, out_h)) * math.copysign(0.9, LEGS[i]["knee"])   # tips curve with the knee
     tip_c = spline_center([D - nrm(T - D) * 0.7, (D + T) / 2 - out_h * 0.45 + sweep, T])
     parts.append(loft(f"Leg{i + 1} tip.{side}", bone("tip"), tip_c, rin,
                       lambda t: 1.35 * q * (0.85 + 0.15 * smoothstep(0, 0.12, t)) * envelope(t, 0.08, 0.78, point=0.05),
                       lambda t: 1.75 * q * (0.85 + 0.15 * smoothstep(0, 0.12, t)) * envelope(t, 0.08, 0.78, point=0.05),
-                      end_samples(9, 0.08, 0.05, 3), n=12, tile=tile("tip"), owner=owner))
+                      end_samples(nr(9), 0.08, 0.05, nr(3, 1)), n=na(12), tile=tile("tip"), owner=owner))
     inward = nrm(C - H) * np.array([1, 1, 0])
     parts.append(sphere(f"Leg{i + 1} hip joint.{side}", bone("upper"), H + UP * 0.6 + inward * 1.2, 2.2 * q, "joint_hip",
                         kind="joint_hip", owner=owner and i == 0))
@@ -404,14 +494,14 @@ def claw_parts(side, s):
     parts = []
     spines = lambda t, a: k * (0.9 * sum(math.exp(-((t - tc) / 0.035) ** 2) for tc in (0.35, 0.55, 0.75))
                                * max(0.0, math.cos(a - math.pi)) ** 12)
-    parts.append(loft(f"Claw arm.{side}", f"claw_arm.{side}", segment_center(P0, E, 2.0, 1.2), -UP,
+    parts.append(loft(f"Claw arm.{side}", bn("claw_arm", side), segment_center(P0, E, 2.0, 1.2), -UP,
                       lambda t: k * (3.0 + 0.9 * t) * cuff(t) * envelope(t, 0.10, 0.10),
                       lambda t: k * (2.6 + 0.6 * t) * cuff(t) * envelope(t, 0.10, 0.10),
-                      end_samples(12, 0.10, 0.10, 3), n=16, radial=spines, tile=tl("claw_arm"), power=2.5))
+                      end_samples(nr(12), 0.10, 0.10, nr(3, 1)), n=na(16), radial=spines, tile=tl("claw_arm"), power=2.5))
     knob = lambda t, a: k * 1.1 * math.exp(-((t - 0.55) / 0.12) ** 2) * max(0.0, math.cos(a - 0.8 * math.pi)) ** 6
-    parts.append(loft(f"Claw wrist.{side}", f"claw_wrist.{side}", segment_center(E, W, 1.2, 1.4), -UP,
+    parts.append(loft(f"Claw wrist.{side}", bn("claw_wrist", side), segment_center(E, W, 1.2, 1.4), -UP,
                       lambda t: k * 4.0 * envelope(t, 0.2, 0.2), lambda t: k * 3.5 * envelope(t, 0.2, 0.2),
-                      end_samples(8, 0.2, 0.2, 3), n=16, radial=knob, tile=tl("claw_wrist")))
+                      end_samples(nr(8), 0.2, 0.2, nr(3, 1)), n=na(16), radial=knob, tile=tl("claw_wrist")))
     # Palm and fixed finger in one piece: a deep, flat-sided palm; the finger runs off its lower edge
     hd = nrm(Hh - W)
     Pe = Hh - zh * 2.8 * k
@@ -425,50 +515,49 @@ def claw_parts(side, s):
         ph = ((t - t0) / th["period"]) % 1.0
         return (1 - ph) ** 1.5 if th["sharp"] else math.sin(math.pi * ph) ** 0.8
     teeth_f = lambda t, a: k * th["height"] * tooth(t, 0.62, 0.95) * max(0.0, math.cos(a - math.pi)) ** 4
-    ts = np.concatenate([[0.0, 0.02, 0.05], np.linspace(0.08, 0.96, 40), [0.985, 1.0]])
-    parts.append(loft(f"Claw hand.{side}", f"claw_hand.{side}", hand_c, -zh,
+    ts = np.concatenate([[0.0, 0.02, 0.05], np.linspace(0.08, 0.96, nr(40, 8)), [0.985, 1.0]])
+    parts.append(loft(f"Claw hand.{side}", bn("claw_hand", side), hand_c, -zh,
                       lambda t: k * palm_r(t, pv, fv), lambda t: k * palm_r(t, ps, fs),
-                      ts, n=22, radial=teeth_f, tile=tl("claw_hand"),
+                      ts, n=na(22), radial=teeth_f, tile=tl("claw_hand"),
                       power=lambda t: 2.0 + 1.1 * smoothstep(0.62, 0.45, t)))
     dact_c = spline_center([Hh - hd * 1.2 * k, Hh + (D_tip - Hh) * 0.45 + zh * cs["arch"] * k, D_tip])
     teeth_d = lambda t, a: k * 0.85 * th["height"] * tooth(t, 0.35, 0.9) * max(0.0, math.cos(a)) ** 4
     dv, ds = cs["dactyl"]
-    parts.append(loft(f"Claw pincer.{side}", f"claw_pincer.{side}", dact_c, -zh,
+    parts.append(loft(f"Claw pincer.{side}", bn("claw_pincer", side), dact_c, -zh,
                       lambda t: k * np.interp(t, [0, 0.08, 0.3, 0.8, 1.0], [0, dv, dv * 0.95, dv * 0.5, dv * 0.16]),
                       lambda t: k * np.interp(t, [0, 0.08, 0.3, 0.8, 1.0], [0, ds, ds * 0.95, ds * 0.55, ds * 0.18]),
-                      np.concatenate([[0.0, 0.03], np.linspace(0.07, 0.96, 28), [0.985, 1.0]]), n=16,
+                      np.concatenate([[0.0, 0.03], np.linspace(0.07, 0.96, nr(28, 6)), [0.985, 1.0]]), n=na(16),
                       radial=teeth_d, tile=tl("claw_pincer"), power=2.3))
-    parts.append(sphere(f"Claw shoulder joint.{side}", f"claw_arm.{side}", P0 + UP * 0.8, 2.9 * k, "joint_hip",
+    parts.append(sphere(f"Claw shoulder joint.{side}", bn("claw_arm", side), P0 + UP * 0.8, 2.9 * k, "joint_hip",
                         kind="joint_hip", owner=False))
     for nm, b, c, r in (("elbow", "claw_wrist", E, 3.3), ("wrist", "claw_hand", W, 3.4), ("hinge", "claw_pincer", Hh, 1.8)):
-        parts.append(sphere(f"Claw {nm} joint.{side}", f"{b}.{side}", c, r * k, "joint_hip", kind="joint_hip", owner=False))
+        parts.append(sphere(f"Claw {nm} joint.{side}", bn(b, side), c, r * k, "joint_hip", kind="joint_hip", owner=False))
     return parts
 
 
 def eye_parts(side, s):
     base, tip, d = eye_rest(s)
     owner = side == "L"
-    return [loft(f"Eye stalk.{side}", f"eye.{side}", segment_center(base, tip, 1.5, 0.0), [0, 1, 0],
+    return [loft(f"Eye stalk.{side}", bn("eye", side), segment_center(base, tip, 1.5, 0.0), [0, 1, 0],
                  lambda t: (1.75 - 0.3 * t) * envelope(t, 0.1, 0.05), lambda t: (1.6 - 0.25 * t) * envelope(t, 0.1, 0.05),
-                 end_samples(7, 0.1, 0.05, 2), n=12, tile="eye_stalk", owner=owner),
-            sphere(f"Eye socket.{side}", f"eye.{side}", base + d * 0.4, 2.3, "joint_hip", kind="joint_hip", owner=False),
-            sphere(f"Eye.{side}", f"eye.{side}", tip + d * 1.7, 3.2, "eyeball", kind="eyeball", mat="eye",
-                   owner=owner, n=20, k=5, axis=d, stretch=1.12)]
+                 end_samples(nr(7), 0.1, 0.05, nr(2, 1)), n=na(12), tile="eye_stalk", owner=owner),
+            sphere(f"Eye socket.{side}", bn("eye", side), base + d * 0.4, 2.3, "joint_hip", kind="joint_hip", owner=False),
+            sphere(f"Eye.{side}", bn("eye", side), tip + d * 1.7, 3.2, "eyeball", kind="eyeball", mat="eye",
+                   owner=owner, n=na(20), k=nr(5), axis=d, stretch=1.12)]
 
 
 def head_parts():
     parts = []
     for side, s in SIDES:
-        a = carapace_point(-84.5 if s > 0 else -95.5, 0.98, top=True) - np.array([0, 0, 0.6])
-        tip = a + np.array([3.0 * s, -5.6, 2.4])
-        parts.append(loft(f"Antenna.{side}", "body", spline_center([a, a + np.array([0.8 * s, -3.0, 1.8]), tip]), -UP,
+        a, tip = antenna_rest(s)
+        parts.append(loft(f"Antenna.{side}", bn("antenna", side), spline_center([a, a + np.array([0.8 * s, -3.0, 1.8]), tip]), -UP,
                           lambda t: 0.62 * envelope(t, 0.1, 0.35, point=0.4), lambda t: 0.62 * envelope(t, 0.1, 0.35, point=0.4),
-                          end_samples(8, 0.1, 0.1, 2), n=8, tile="antenna", owner=side == "L"))
+                          end_samples(nr(8), 0.1, 0.1, nr(2, 1)), n=na(8), tile="antenna", owner=side == "L"))
         # third maxillipeds: two flat plates side by side that close over the mouth
-        top = C + np.array([1.85 * s, -15.0, -1.6])
-        parts.append(loft(f"Mouthpart.{side}", "body", segment_center(top, top + np.array([0.0, -1.1, -4.6])), [0, -1, 0],
+        top, bot = mouth_rest(s)
+        parts.append(loft(f"Mouthpart.{side}", bn("mouthpart", side), segment_center(top, bot), [0, -1, 0],
                           lambda t: 0.5 * envelope(t, 0.12, 0.18), lambda t: 1.75 * envelope(t, 0.12, 0.18),
-                          end_samples(6, 0.12, 0.18, 3), n=12, tile="mouth", owner=side == "L", power=4.0))
+                          end_samples(nr(6), 0.12, 0.18, nr(3, 1)), n=na(12), tile="mouth", owner=side == "L", power=4.0))
     return parts
 
 
@@ -483,11 +572,12 @@ def abdomen_part():
         pts.append([C[0], C[1] + y, z])
     width = lambda t: np.interp(t, [0, 0.1, 0.45, 0.8, 1.0], [0.0, 2.6, 4.4, 5.8, 5.2])
     return loft("Abdomen", "body", spline_center(pts), UP, lambda t: 0.75 * envelope(t, 0.08, 0.1),
-                lambda t: width(t) * envelope(t, 0.08, 0.1), end_samples(16, 0.08, 0.1, 3), n=16, tile="abdomen",
+                lambda t: width(t) * envelope(t, 0.08, 0.1), end_samples(nr(16), 0.08, 0.1, nr(3, 1)), n=na(16), tile="abdomen",
                 kind="abdomen", power=3.0)
 
 
-def build_parts():
+def build_parts(lod=0):
+    set_lod(lod)
     parts = [carapace_part()]
     for side, s in SIDES:
         for i in range(4):

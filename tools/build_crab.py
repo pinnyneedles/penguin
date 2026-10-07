@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Build the rigged crab for the penguin game: one skinned mesh, a 36-bone skeleton, a painted texture atlas
-(colour, normal map, ORM with baked ambient occlusion), an Unreal FBX and preview renders.
+"""Build the rigged crab for the penguin game: a skinned mesh with three lower levels of detail, an 80-bone skeleton
+(40 skinned bones plus IK goals, knee poles, foot contact and claw points for procedural animation), a painted
+texture atlas (colour, normal map, ORM with baked ambient occlusion), Unreal FBX files and preview renders.
 
     python3 tools/build_crab.py [--out crab] [--tex 2048] [--no-previews]
 
@@ -40,31 +41,36 @@ for p in parts:
 rects, ppc = TX.pack(sizes, NTEX, pad=int(NTEX / 256))
 print("ATLAS", NTEX, "px, texels per cm", round(ppc / 1.0, 2), flush=True)
 
-verts, faces, loop_uv, loop_u, face_mat, face_kind, face_part, vt, vbone = [], [], [], [], [], [], [], [], []
-for pi, p in enumerate(parts):
-    o = len(verts)
-    verts.extend(p.verts.tolist()); vt.extend(p.vt.tolist()); vbone.extend([p.bone] * len(p.verts))
-    for f, fu, tile in zip(p.faces, p.fuv, p.ftile):
-        u0, v0, u1, v1 = rects[tile]
-        faces.append([i + o for i in f])
-        loop_uv.extend([(u0 + (u1 - u0) * u, v0 + (v1 - v0) * v) for u, v in fu])
-        loop_u.extend([u for u, v in fu])
-        face_mat.append(1 if p.mat == "eye" else 0)
-        face_kind.append(TX.KIND[TX.kind_of(tile)]); face_part.append(pi)
+def assemble(parts, name, coll):
+    """Parts -> one mesh object with the packed atlas UVs, outward normals and smooth shading with crisp creases."""
+    verts, faces, loop_uv, loop_u, face_mat, face_kind, face_part, vt, vbone = [], [], [], [], [], [], [], [], []
+    for pi, p in enumerate(parts):
+        o = len(verts)
+        verts.extend(p.verts.tolist()); vt.extend(p.vt.tolist()); vbone.extend([p.bone] * len(p.verts))
+        for f, fu, tile in zip(p.faces, p.fuv, p.ftile):
+            u0, v0, u1, v1 = rects[tile]
+            faces.append([i + o for i in f])
+            loop_uv.extend([(u0 + (u1 - u0) * u, v0 + (v1 - v0) * v) for u, v in fu])
+            loop_u.extend([u for u, v in fu])
+            face_mat.append(1 if p.mat == "eye" else 0)
+            face_kind.append(TX.KIND[TX.kind_of(tile)]); face_part.append(pi)
+    me = bpy.data.meshes.new(name + "_Mesh")
+    me.from_pydata(verts, [], faces); me.update()
+    uvl = me.uv_layers.new(name="UVMap")
+    uvl.data.foreach_set("uv", np.array(loop_uv, np.float32).ravel())
+    for f, m in zip(me.polygons, face_mat): f.material_index = m
+    bm = bmesh.new(); bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces: f.smooth = True
+    for e in bm.edges:
+        e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0) > math.radians(65))
+    bm.to_mesh(me); bm.free(); me.update()
+    ob = bpy.data.objects.new(name, me); coll.objects.link(ob)
+    return ob, dict(loop_uv=loop_uv, loop_u=loop_u, face_kind=face_kind, face_part=face_part, vt=vt, vbone=vbone)
 
-me = bpy.data.meshes.new("Crab_DeformMesh")
-me.from_pydata(verts, [], faces); me.update()
-uvl = me.uv_layers.new(name="UVMap")
-uvl.data.foreach_set("uv", np.array(loop_uv, np.float32).ravel())
-for f, m in zip(me.polygons, face_mat): f.material_index = m
-# outward normals per closed part, smooth shading with crisp creases at the teeth and fingertips
-bm = bmesh.new(); bm.from_mesh(me)
-bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-for f in bm.faces: f.smooth = True
-for e in bm.edges:
-    e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0) > math.radians(65))
-bm.to_mesh(me); bm.free(); me.update()
-char = bpy.data.objects.new("SK_Crab", me); CHAR.objects.link(char)
+
+char, A = assemble(parts, "SK_Crab", CHAR); me = char.data
+loop_uv, loop_u, face_kind, face_part, vt, vbone = A["loop_uv"], A["loop_u"], A["face_kind"], A["face_part"], A["vt"], A["vbone"]
 print("MESH", len(me.vertices), "verts", sum(len(p.vertices) - 2 for p in me.polygons), "tris", flush=True)
 
 # ---------------------------------------------------------------------------
@@ -175,33 +181,53 @@ for name, h, t, z, parent in SK:
     b.use_connect = False
 bpy.ops.object.mode_set(mode="OBJECT")
 rig.show_in_front = True; arm.display_type = "OCTAHEDRAL"
-for name, *_ in SK:
-    char.vertex_groups.new(name=name)
-groups = {}
-for i, b in enumerate(vbone): groups.setdefault(b, []).append(i)
-for b, ids in groups.items(): char.vertex_groups[b].add(ids, 1.0, "REPLACE")
-char.parent = rig
-mod = char.modifiers.new("Deform • Crab_Skeleton", "ARMATURE"); mod.object = rig
+def skin(ob, bone_of_vertex):
+    """Rigid skinning: every vertex belongs to exactly one bone with weight 1."""
+    groups = {}
+    for i, b in enumerate(bone_of_vertex): groups.setdefault(b, []).append(i)
+    for b, ids in groups.items(): ob.vertex_groups.new(name=b).add(ids, 1.0, "REPLACE")
+    ob.parent = rig
+    ob.modifiers.new("Deform • Crab_Skeleton", "ARMATURE").object = rig
+    return set(groups)
+
+
+SKINNED = skin(char, vbone)
+# Lower levels of detail: the same parts at lower resolution, same skeleton, same atlas
+LOD_COLL = bpy.data.collections.new("LODs • exported as SK_Crab_LOD1-3"); sc.collection.children.link(LOD_COLL)
+LODS = []
+for lv in (1, 2, 3):
+    ob, AL = assemble(G.build_parts(lv), f"SK_Crab_LOD{lv}", LOD_COLL)
+    ob.data.materials.append(shell); ob.data.materials.append(eye)
+    skin(ob, AL["vbone"]); LODS.append(ob)
+G.set_lod(0)
+LOD_COLL.hide_render = True
 for p in rig.pose.bones: p.rotation_mode = "QUATERNION"
 for side, s in G.SIDES:                                   # knee tilt per leg, read by the animation solver
-    for i in range(1, 5): arm.bones[f"leg{i}_upper.{side}"]["knee_tilt_deg"] = G.LEGS[i - 1]["knee"]
+    for i in range(1, 5): arm.bones[G.bn(f"leg{i}_upper", side)]["knee_tilt_deg"] = G.LEGS[i - 1]["knee"]
 rig["Design"] = "Crab for the penguin game | rigid shell pieces, one bone each | right crusher claw, left cutter"
 rig["Units"] = "centimeters; +Z up; crab faces -Y in Blender (its left is +X); FBX converts to +X forward"
 
 # ---------------------------------------------------------------------------
 # Export and stats
 # ---------------------------------------------------------------------------
-def select_character():
-    bpy.ops.object.select_all(action="DESELECT"); rig.select_set(True); char.select_set(True)
-    bpy.context.view_layer.objects.active = rig
 rig.name = "Armature"          # Unreal drops a root node named "Armature" instead of adding an extra bone
-select_character()
-bpy.ops.export_scene.fbx(
-    filepath=os.path.join(OUT, "SK_Crab.fbx"), use_selection=True, object_types={"ARMATURE", "MESH"}, global_scale=1,
-    apply_unit_scale=True, apply_scale_options="FBX_SCALE_UNITS", axis_forward="X", axis_up="Z",
-    use_space_transform=True, bake_space_transform=False, add_leaf_bones=False, primary_bone_axis="Y",
-    secondary_bone_axis="X", use_armature_deform_only=True, use_mesh_modifiers=True, mesh_smooth_type="FACE",
-    use_tspace=True, bake_anim=False, path_mode="COPY", embed_textures=True)
+
+
+def export_fbx(path, mesh_obj, embed=True):
+    bpy.ops.object.select_all(action="DESELECT"); rig.select_set(True); mesh_obj.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.export_scene.fbx(
+        filepath=path, use_selection=True, object_types={"ARMATURE", "MESH"}, global_scale=1,
+        apply_unit_scale=True, apply_scale_options="FBX_SCALE_UNITS", axis_forward="X", axis_up="Z",
+        use_space_transform=True, bake_space_transform=False, add_leaf_bones=False, primary_bone_axis="Y",
+        secondary_bone_axis="X", use_armature_deform_only=True, use_mesh_modifiers=True, mesh_smooth_type="FACE",
+        use_tspace=True, bake_anim=False, path_mode="COPY" if embed else "AUTO", embed_textures=embed)
+
+
+export_fbx(os.path.join(OUT, "SK_Crab.fbx"), char)
+for lv, ob in enumerate(LODS, 1):
+    export_fbx(os.path.join(OUT, f"SK_Crab_LOD{lv}.fbx"), ob, embed=False)
+    ob.hide_set(True)
 
 me.calc_loop_triangles()
 bad = sum(1 for v in me.vertices if abs(sum(g.weight for g in v.groups) - 1) > 1e-4 or len(v.groups) != 1)
@@ -213,50 +239,46 @@ stats = dict(vertices=len(me.vertices), triangles=len(me.loop_triangles), bones=
              bounds_cm=dict(min=[round(v, 1) for v in lo], max=[round(v, 1) for v in hi]),
              size_cm=dict(span_x=round(hi[0] - lo[0], 1), length_y=round(hi[1] - lo[1], 1), height=round(hi[2], 1)),
              carapace_cm=dict(width=round(2 * max(G.rim_radius(np.linspace(-90, 90, 721), 1.0)), 1)),
-             claws="right: heavy crusher, 32% larger; left: slimmer cutter", fps=30, blender_version=bpy.app.version_string)
+             claws="right: heavy crusher, 32% larger; left: slimmer cutter", fps=30, blender_version=bpy.app.version_string,
+             lod_triangles=[len(me.loop_triangles)] + [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in LODS],
+             skinned_bones=sorted(SKINNED), helper_bones=sorted(b.name for b in arm.bones if G.is_helper(b.name)))
 json.dump(stats, open(os.path.join(OUT, "source_stats.json"), "w"), indent=2)
 print("CRAB_STATS", json.dumps(stats), flush=True)
 
 # ---------------------------------------------------------------------------
-# Animator controls (Blender only, never exported): drag a foot target and its leg follows, with a pole
-# above each knee. Claws, eyes and the shell are posed by rotating or moving their bones directly.
+# Posing rig (Blender): the exported foot goals ik_legN drive each leg through IK on the ik_legN_ankle child, with
+# the exported pole_legN bones as knee poles, the same setup as a Two Bone IK in Unreal. Every bone is exported.
+# Claws, eyes, antennae, mouthparts and the shell are posed by rotating bones.
 # ---------------------------------------------------------------------------
-bpy.context.view_layer.objects.active = rig; bpy.ops.object.mode_set(mode="EDIT")
-eb = arm.edit_bones
-for side, s in G.SIDES:
-    for i in range(1, 5):
-        tip, low = eb[f"leg{i}_tip.{side}"], eb[f"leg{i}_lower.{side}"]
-        T, Dp, K = tip.tail.copy(), tip.head.copy(), low.head.copy()
-        c = eb.new(f"IK_foot{i}.{side}"); c.head = T; c.tail = T + Vector((0, 0, 6)); c.parent = eb["root"]
-        d = eb.new(f"IK_tipbase{i}.{side}"); d.head = Dp; d.tail = Dp + (Dp - T).normalized() * 3; d.parent = c
-        H = eb[f"leg{i}_upper.{side}"].head.copy(); u = (Dp - H).normalized(); w = ((K - H) - u * (K - H).dot(u)).normalized()
-        pole = eb.new(f"POLE_knee{i}.{side}"); pole.head = K + w * 14; pole.tail = pole.head + w * 4
-        pole.parent = eb["body"]
-        for b in (c, d, pole): b.use_deform = False
-bpy.ops.object.mode_set(mode="OBJECT")
-deform_coll = arm.collections.new("Deform"); ctrl_coll = arm.collections.new("Controls")
+coll_skin = arm.collections.new("Skinned"); coll_help = arm.collections.new("Procedural helpers (exported)")
 for b in arm.bones:
-    (deform_coll if b.use_deform else ctrl_coll).assign(b)
-    if not b.use_deform: b.color.palette = "THEME09" if b.name.startswith("IK_foot") else "THEME04"
+    if G.is_helper(b.name):
+        coll_help.assign(b); b.color.palette = "THEME09" if b.name.startswith("ik_") else "THEME04"
+    else:
+        coll_skin.assign(b)
 for side, s in G.SIDES:
     for i in range(1, 5):
-        ik = rig.pose.bones[f"leg{i}_lower.{side}"].constraints.new("IK")
-        ik.target = rig; ik.subtarget = f"IK_tipbase{i}.{side}"; ik.chain_count = 2
-        ik.pole_target = rig; ik.pole_subtarget = f"POLE_knee{i}.{side}"
-        dt = rig.pose.bones[f"leg{i}_tip.{side}"].constraints.new("DAMPED_TRACK")
-        dt.target = rig; dt.subtarget = f"IK_foot{i}.{side}"; dt.track_axis = "TRACK_Y"
+        ik = rig.pose.bones[G.bn(f"leg{i}_lower", side)].constraints.new("IK")
+        ik.target = rig; ik.subtarget = G.bn(f"ik_leg{i}_ankle", side); ik.chain_count = 2
+        ik.pole_target = rig; ik.pole_subtarget = G.bn(f"pole_leg{i}", side)
+        dt = rig.pose.bones[G.bn(f"leg{i}_tip", side)].constraints.new("DAMPED_TRACK")
+        dt.target = rig; dt.subtarget = G.bn(f"ik_leg{i}", side); dt.track_axis = "TRACK_Y"
+
+
 def leg_error(side, i):
     bpy.context.view_layer.update()
     err = 0.0
     for seg in ("upper", "lower", "tip"):
-        nm = f"leg{i}_{seg}.{side}"
+        nm = G.bn(f"leg{i}_{seg}", side)
         a = rig.pose.bones[nm].matrix.to_quaternion(); b = arm.bones[nm].matrix_local.to_quaternion()
         err = max(err, a.rotation_difference(b).angle)
     return math.degrees(min(err, 2 * math.pi - err))
+
+
 pole_report = {}
 for side, s in G.SIDES:
     for i in range(1, 5):
-        ik = rig.pose.bones[f"leg{i}_lower.{side}"].constraints["IK"]
+        ik = rig.pose.bones[G.bn(f"leg{i}_lower", side)].constraints["IK"]
         best = min(((leg_error(side, i) if not setattr(ik, "pole_angle", math.radians(a)) else 0), a) for a in range(-180, 180, 5))
         lo_a = best[1]
         for step in (1.0, 0.1, 0.02):                         # refine the pole angle around the best coarse value
@@ -264,18 +286,19 @@ for side, s in G.SIDES:
             best = min(((leg_error(side, i) if not setattr(ik, "pole_angle", math.radians(a)) else 0), a) for a in cands)
             lo_a = best[1]
         ik.pole_angle = math.radians(lo_a)
-        pole_report[f"leg{i}.{side}"] = dict(pole_angle_deg=round(lo_a, 2), rest_error_deg=round(leg_error(side, i), 4))
-# a moved foot target must carry the foot with it
-pb = rig.pose.bones["IK_foot2.L"]; pb.location = (0, 0, 0)
-before = rig.pose.bones["leg2_tip.L"].tail.copy()
+        pole_report[G.bn(f"leg{i}", side)] = dict(pole_angle_deg=round(lo_a, 2), rest_error_deg=round(leg_error(side, i), 4))
+# a moved foot goal must carry the foot with it
+pb = rig.pose.bones["ik_leg2_l"]
 pb.matrix = Matrix.Translation(Vector((6, -4, 5))) @ pb.matrix; bpy.context.view_layer.update()
-follow = (rig.pose.bones["leg2_tip.L"].tail - rig.pose.bones["IK_foot2.L"].head).length
+follow = (rig.pose.bones["leg2_end_l"].head - rig.pose.bones["ik_leg2_l"].head).length
 for p in rig.pose.bones: p.location = (0, 0, 0); p.rotation_quaternion = (1, 0, 0, 0)
 bpy.context.view_layer.update()
 stats["control_rig"] = dict(legs=pole_report, foot_follow_error_cm=round(follow, 4),
-                            note="IK_foot*: drag to place a foot; POLE_knee*: knee direction; other bones are FK")
+                            note="ik_legN_l/r: drag to place a foot (the leg follows by IK); pole_legN_l/r: knee "
+                                 "direction; claws, eyes, antennae and body are rotated directly")
 json.dump(stats, open(os.path.join(OUT, "source_stats.json"), "w"), indent=2)
 print("CONTROL_RIG", json.dumps(stats["control_rig"]), flush=True)
+
 
 # ---------------------------------------------------------------------------
 # Studio and previews (kept out of the FBX)
@@ -317,4 +340,33 @@ if "--no-previews" not in argv:
     sheet = Image.new("RGB", (1600, 1600))
     for k, im in enumerate(ims): sheet.paste(im, ((k % 2) * 800, (k // 2) * 800))
     sheet.save(os.path.join(OUT, "Preview_Sheet.png"))
+    # levels of detail side by side, with their triangle edges drawn on the shell
+    wire = shell.copy(); wire.name = "PREVIEW • LOD wire"; wn = wire.node_tree
+    wbs = next(n for n in wn.nodes if n.type == "BSDF_PRINCIPLED")
+    col = wbs.inputs["Base Color"].links[0].from_socket
+    wf = wn.nodes.new("ShaderNodeWireframe"); wf.use_pixel_size = True; wf.inputs["Size"].default_value = 0.9
+    mix = wn.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
+    rgba = [i for i in mix.inputs if i.type == "RGBA"]
+    wn.links.new(wf.outputs["Fac"], mix.inputs[0]); wn.links.new(col, rgba[0]); rgba[1].default_value = (0.02, 0.02, 0.02, 1)
+    wn.links.new(next(o for o in mix.outputs if o.type == "RGBA"), wbs.inputs["Base Color"])
+    LOD_COLL.hide_render = False
+    cam.location = (150, -220, 140); track(cam, (0, -6, 12)); camd.ortho_scale = 125
+    sc.render.resolution_x = sc.render.resolution_y = 600
+    shots = []
+    for lv, ob in enumerate([char] + LODS):
+        for o in [char] + LODS: o.hide_render = o is not ob
+        ob.hide_set(False); old_mat = ob.data.materials[0]; ob.data.materials[0] = wire
+        pth = os.path.join(OUT, f"_lod{lv}.png"); sc.render.filepath = pth; bpy.ops.render.render(write_still=True)
+        ob.data.materials[0] = old_mat; shots.append(pth)
+        if lv: ob.hide_set(True)
+    for o in [char] + LODS: o.hide_render = False
+    LOD_COLL.hide_render = True; bpy.data.materials.remove(wire)
+    from PIL import ImageDraw, ImageFont
+    try: font = ImageFont.truetype("DejaVuSans.ttf", 22)
+    except OSError: font = ImageFont.load_default()
+    sheet = Image.new("RGB", (2400, 640), (240, 240, 238)); dr = ImageDraw.Draw(sheet)
+    for lv, pth in enumerate(shots):
+        sheet.paste(Image.open(pth).convert("RGB"), (lv * 600, 0)); os.remove(pth)
+        dr.text((lv * 600 + 14, 606), f"LOD{lv}: {stats['lod_triangles'][lv]:,} triangles", fill=(30, 30, 30), font=font)
+    sheet.save(os.path.join(OUT, "Preview_LODs.png"))
 print("CRAB_BUILD_COMPLETE", flush=True)
