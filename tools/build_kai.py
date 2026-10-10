@@ -31,7 +31,7 @@ def log(*a):
 
 # slot: (export name, marching-cubes spacing (cm), triangle budget, texture size, is part of the default outfit)
 SLOTS = {
-    "head": ("SK_Kai_Head", 0.22, 9000, 2048, True),
+    "head": ("SK_Kai_Head", 0.22, 7600, 2048, True),          # plus EAR_TRIS for each ear
     "hair_tousled": ("SK_Kai_Hair_Tousled", 0.26, 8000, 1024, True),
     "hair_spiky": ("SK_Kai_Hair_Spiky", 0.26, 8000, 1024, False),
     "arms": ("SK_Kai_Arms", 0.15, 9000, 1024, True),
@@ -42,8 +42,10 @@ SLOTS = {
     "sash": ("SK_Kai_Sash", 0.22, 3000, 1024, True),
     "neckerchief": ("SK_Kai_Neckerchief", 0.18, 1600, 512, True),
 }
+EAR_TRIS = 1500
 if DRAFT:
     SLOTS = {k: (n, h * 1.6, b // 2, max(256, t // 2), d) for k, (n, h, b, t, d) in SLOTS.items()}
+    EAR_TRIS //= 2
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
@@ -90,13 +92,27 @@ def make_mesh(name, V, F):
     return me
 
 
-def decimated(V, F, target):
-    me = make_mesh("tmp", V, F); ob = bpy.data.objects.new("tmp", me); sc.collection.objects.link(ob)
-    mod = ob.modifiers.new("dec", "DECIMATE"); mod.ratio = min(1.0, target / max(len(F), 1))
-    dg = bpy.context.evaluated_depsgraph_get(); ev = ob.evaluated_get(dg); m2 = ev.to_mesh()
-    out = np_mesh(m2)
-    ev.to_mesh_clear(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
-    return out
+def decimated(V, F, target, zone=None, zone_target=0):
+    """Blender's collapse decimation down to about `target` triangles. With zone (positions -> bool per vertex), that
+    region is decimated on its own to zone_target triangles, so small detail like the ears keeps enough of them."""
+    def run(V, F, ratio, mask=None):
+        me = make_mesh("tmp", V, F); ob = bpy.data.objects.new("tmp", me); sc.collection.objects.link(ob)
+        mod = ob.modifiers.new("dec", "DECIMATE"); mod.ratio = min(1.0, ratio)
+        if mask is not None:                     # weight 0 leaves a vertex alone, weight 1 lets it go
+            vg = ob.vertex_groups.new(name="dec")
+            vg.add(np.flatnonzero(mask).tolist(), 1.0, "REPLACE")
+            mod.vertex_group = "dec"
+        dg = bpy.context.evaluated_depsgraph_get(); ev = ob.evaluated_get(dg); m2 = ev.to_mesh()
+        out = np_mesh(m2)
+        ev.to_mesh_clear(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
+        return out
+    if zone is None:
+        return run(V, F, target / max(len(F), 1))
+    z = zone(V); Fa = np.asarray(F)
+    n_zone = int(z[Fa].all(axis=1).sum())
+    V, F = run(V, F, (n_zone + target) / len(F), ~z)              # everything else first
+    z = zone(V)
+    return run(V, F, (target + zone_target) / len(F), z)          # then the zone
 
 
 class Piece:
@@ -112,7 +128,10 @@ def build_pieces(slot):
     fn = G.PARTS[slot][0]
     V, F = G.polygonize(fn, G.part_box(slot), h)
     n_mc = len(F)
-    V, F = decimated(V, F, budget)
+    if slot == "head":
+        V, F = decimated(V, F, budget, lambda P: np.any([G.ear_zone(P, s) < 1.0 for _, s in G.SIDES], axis=0), 2 * EAR_TRIS)
+    else:
+        V, F = decimated(V, F, budget)
     log(slot, "marching cubes", n_mc, "->", len(F), "faces")
     pieces = [Piece(V, F, TX.PIECES["body"], 0)]
     if slot == "head":
@@ -245,6 +264,12 @@ PARTS, OFFS, PIECES = {}, {}, {}
 for slot, (name, h, budget, tex, default) in SLOTS.items():
     pieces = build_pieces(slot)
     ob, offs = assemble(slot, pieces, CHAR if default else ALT)
+    if slot == "head":                           # toon shading normals for the ears (see G.ear_normals)
+        me = ob.data; Pv = np.empty(len(me.vertices) * 3); me.vertices.foreach_get("co", Pv); Pv = Pv.reshape(-1, 3)
+        Nv = np.empty(len(me.vertices) * 3); me.vertex_normals.foreach_get("vector", Nv); Nv = Nv.reshape(-1, 3)
+        nb = len(pieces[0].V)
+        Nv[:nb] = G.ear_normals(Pv[:nb], Nv[:nb])
+        me.normals_split_custom_set_from_vertices(Nv.tolist())
     nm = 2 if slot == "head" else 1
     unwrap(ob, nm)
     texs = paint(ob, slot)

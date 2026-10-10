@@ -57,6 +57,9 @@ bad += check("upper arms hidden in the sleeves", arms, G.tunic_sdf, under_sleeve
 head = surface(G.head_base_sdf, G.HEAD_BOX)
 bad += check("neck hidden in the tunic and collar (below the collar)", head,
              lambda P: np.minimum(G.tunic_sdf(P), G.collar_sdf(P)), lambda P: P[:, 2] < G.Z["shoulder"] - 0.2, True, 0.05)
+ears = lambda P: np.any([(G.ear_zone(P, s) < 1.0) & (G.ear_local(P, s)[:, 2] > 0.0) for _, s in G.SIDES], axis=0)
+for style in ("hair_tousled", "hair_spiky"):
+    bad += check(f"ears clear of the {style.split('_')[1]} hair", head, G.PARTS[style][0], ears, False, 0.02)
 sash = surface(G.sash_sdf, G.SASH_BOX)
 bad += check("sash band and tails sit on the tunic (knot excluded)", sash, G.tunic_sdf,
              lambda P: np.linalg.norm(P - G.sash_knot(), axis=1) > 2.6, False, 0.02)

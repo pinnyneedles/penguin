@@ -291,9 +291,10 @@ def ear_local(P, s):
 
 
 def _ear_rim():
-    """Rim (helix) of the ear: a smooth C from the top front, round the top and back, down to the lobe."""
+    """Rim (helix) of the ear: a smooth C from the top front, round the top and back, down to the lobe. Finely sampled,
+    and joined with a plain union, so the tube has no bumps at the joints for the cel shading to pick out."""
     pts = []
-    for th in np.linspace(math.radians(148), math.radians(-112), 14):
+    for th in np.linspace(math.radians(148), math.radians(-112), 48):
         f = (math.radians(148) - th) / math.radians(260)
         pts.append((2.2 + 2.35 * math.cos(th), 0.25 + 3.95 * math.sin(th), 0.52 + 0.4 * f ** 2))
     return pts
@@ -301,22 +302,55 @@ def _ear_rim():
 
 EAR_RIM = _ear_rim()
 EAR_K = 1.08                                                          # overall ear size
+EAR_BOWL = dict(c=(2.05, 0.1), r=(1.8, 3.1))                          # outline of the hollow, in the ear's plane
 
 
 def ear_sdf(P, s):
-    """A stylised ear: a rolled rim curling from the top round to a soft lobe, a hollow bowl, a small inner fold
-    and a tragus bump at the front."""
+    """A stylised ear: a rolled rim curling from the top round to a soft lobe, around one smooth hollow bowl. Kept
+    to simple shapes, so a two-tone shader draws it as a clean C."""
     L = ear_local(P, s) / EAR_K
     plate = sd_ellipsoid(L, np.array([2.15, 0.15, 0.55]), np.array([2.7, 4.3, 0.95]))
-    rim = sd_chain(L, [np.array([u, v, 1.05]) for u, v, r in EAR_RIM], [r for u, v, r in EAR_RIM], 0.45)
+    rim = None
+    for (u0, v0, r0), (u1, v1, r1) in zip(EAR_RIM[:-1], EAR_RIM[1:]):
+        e = sd_round_cone(L, np.array([u0, v0, 1.05]), np.array([u1, v1, 1.05]), r0, r1)
+        rim = e if rim is None else np.minimum(rim, e)
     d = smin(plate, rim, 0.6)
     d = smin(d, sd_ellipsoid(L, np.array([1.7, -3.2, 0.7]), np.array([1.5, 1.2, 0.95])), 0.8)       # lobe
-    bowl = sd_ellipsoid(L, np.array([2.05, 0.2, 2.0]), np.array([1.75, 3.0, 1.35]))
-    d = smax(d, -bowl, 0.7)
-    fold = sd_chain(L, [np.array([2.9, 2.5, 0.95]), np.array([3.3, 0.8, 0.95]), np.array([2.9, -1.0, 0.9])], [0.3, 0.34, 0.28], 0.3)
-    d = smin(d, fold, 0.55)
-    d = smin(d, sd_ellipsoid(L, np.array([0.45, -0.7, 0.95]), np.array([0.6, 0.75, 0.55])), 0.35)   # tragus
+    bowl = sd_ellipsoid(L, np.array([*EAR_BOWL["c"], 1.95]), np.array([*EAR_BOWL["r"], 1.3]))
+    d = smax(d, -bowl, 1.0)
     return smax(d, -L[:, 2] - 0.8, 0.3) * EAR_K                         # nothing behind the root
+
+
+def ear_zone(P, s):
+    """Below 1 on and around the ear on side s (an ellipsoid in the ear's frame)."""
+    L = ear_local(P, s) / EAR_K
+    return np.linalg.norm((L - np.array([2.1, 0.0, 0.3])) / np.array([4.0, 5.6, 3.0]), axis=1)
+
+
+def _sstep(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+def ear_normals(P, N):
+    """Shading normals for the ears, the usual toon trick: normals taken from the smooth shape itself rather than
+    the triangles, and the inside of the bowl turned to face the way the ear faces, so the hollow shades as one
+    tone with a clean lit (or shaded) crescent along the rim instead of patches. Fades into N at the zone's edge."""
+    N = np.array(N, float)
+    for side, s in SIDES:
+        r = ear_zone(P, s); m = r < 1.0
+        if not m.any(): continue
+        n = ear_frame(s)[3]
+        Ns = sdf_normals(P[m], head_base_sdf, h=0.06)
+        L = ear_local(P[m], s) / EAR_K
+        e = np.hypot((L[:, 0] - EAR_BOWL["c"][0]) / EAR_BOWL["r"][0], (L[:, 1] - EAR_BOWL["c"][1]) / EAR_BOWL["r"][1])
+        w = (1 - _sstep(0.7, 0.95, e)) * _sstep(-0.5, 0.0, L[:, 2]) * _sstep(0.0, 0.5, Ns @ n)
+        Ns = Ns * (1 - w[:, None]) + n * w[:, None]
+        Ns /= np.linalg.norm(Ns, axis=1, keepdims=True)
+        f = (1 - _sstep(0.75, 1.0, r[m]))[:, None]
+        Nm = N[m] * (1 - f) + Ns * f
+        N[m] = Nm / np.linalg.norm(Nm, axis=1, keepdims=True)
+    return N
 
 
 def head_base_sdf(P):
