@@ -116,9 +116,12 @@ def paint_head(a):
             e = F["eyes"][side]
             x, y, depth = eye_coords(Pb, e)
             r = np.sqrt(x * x + y * y)
-            # the inside wall of the eye opening: a bold dark line along the top, like an inked upper lid
-            wall = (r < 1.12) & (depth < 0.9) & (y > -0.05)
-            c[wall] = mix(c[wall], PAL["lash"], sstep(-0.05, 0.3, y[wall]))
+            # an inked upper lid: the top half of the opening's wall, and a line on the skin rim that is bold across
+            # the top and tapers away by the middle of each side
+            rim = depth > G.EYE["rim"] - 0.08
+            th = 0.13 * sstep(-0.05, 0.6, y)
+            line = (r < 1.0 + th) & (depth < G.EYE["rim"] + 0.4) & (y > -0.05) & (~rim | (r > 0.97))
+            c[line] = mix(c[line], PAL["lash"], sstep(-0.05, 0.25, y[line]))
         # the hollow of each ear: a crisp, slightly darker oval on the bowl floor, so the ear reads in any light
         for side, s in G.SIDES:
             L = G.ear_local(Pb, s) / G.EAR_K

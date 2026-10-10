@@ -249,7 +249,8 @@ def sdf_normals(P, sdf, h=0.02):
 # Head
 # ---------------------------------------------------------------------------
 EAR = dict(dy=1.6, dz=-3.2)                            # where the ear's front edge meets the head
-EYE = dict(x=6.9, dz=-3.4, a=4.0, b=5.3, tilt=5.0)    # centre, half width, half height (cm), lean of the tops (deg)
+EYE = dict(x=6.9, dz=-3.4, a=4.0, b=5.3, tilt=5.0,   # centre, half width, half height (cm), lean of the tops (deg)
+           R=10.0, pop=0.1, rim=0.45)             # eyeball radius, eye white's centre above the face, skin rim above it
 IRIS = dict(a=2.75, b=3.45)                            # iris half width and half height
 BROW = dict(dz=4.9, x0=2.3, x1=10.4, arch=0.5, slant=0.35, w=1.95, t=0.9)
 MOUTH = dict(dz=-12.4)
@@ -361,38 +362,72 @@ def head_base_sdf(P):
     return d
 
 
+_EYES = {}
 _FACE = {}
 
 
-def face_layout():
-    """Eye pivots and frames, brow and mouth placement, all fitted to the head surface."""
-    if _FACE: return _FACE
-    eyes = {}
+def eye_layout():
+    """Eye pivots and frames. Each eye is a round eyeball (EYE["R"]) whose centre sits EYE["pop"] proud of the face, so
+    the eyes bulge out of the head rather than sitting in sockets."""
+    if _EYES: return _EYES
     for side, s in SIDES:
         c = ray_hits(np.array([EYE["x"] * s, -40.0, HEAD_C[2] + EYE["dz"]]), np.array([0.0, 1.0, 0.0]), head_base_sdf)[0]
         n = nrm(sdf_normals(c, head_base_sdf)[0] * 0.75 + FWD * 0.25)    # look a little more forward than the skin
         u0 = nrm(np.cross(UP, n)); v0 = nrm(np.cross(n, u0))           # u0 toward +X, v0 up
         tilt = -math.radians(EYE["tilt"]) * s                             # the tops of the eyes lean outward
         u = nrm(u0 * math.cos(tilt) + v0 * math.sin(tilt)); v = nrm(np.cross(n, u))
-        ang = np.linspace(0, 2 * math.pi, 32, endpoint=False)
-        ring = c + np.outer(np.cos(ang) * EYE["a"] * 1.2, u) + np.outer(np.sin(ang) * EYE["b"] * 1.2, v)
-        best = None
-        for R in np.arange(9.0, 26.0, 0.5):                              # sphere that best follows the skin
-            P = c - n * R
-            dirs = (ring - P) / np.linalg.norm(ring - P, axis=1, keepdims=True)
-            hits = ray_hits(ring + dirs * 8.0, -dirs, head_base_sdf, t_max=16.0, steps=320)   # from outside, inward
-            dist = np.linalg.norm(hits - P, axis=1)
-            spread = dist.max() - dist.min()
-            if best is None or spread < best[0]: best = (spread, R, P, dist.min())
-        _, R, P, dmin = best
-        eyes[side] = dict(center=c, n=n, u=u, v=v, pivot=P, R=min(dmin, R) - 0.62, a=EYE["a"], b=EYE["b"])
+        R = EYE["R"]
+        _EYES[side] = dict(center=c, n=n, u=u, v=v, pivot=c + n * (EYE["pop"] - R), R=R, a=EYE["a"], b=EYE["b"])
+    return _EYES
+
+
+def _eye_dome_weight(P, e):
+    """1 over the eye and just around it, fading to 0 by 1.8 times the eye's size; only in front of the pivot."""
+    q = P - e["pivot"]
+    rho = np.hypot(q @ e["u"] / e["a"], q @ e["v"] / e["b"])
+    return (1 - _sstep(1.2, 1.8, rho)) * _sstep(0.0, 3.0, q @ e["n"])
+
+
+def head_skin_sdf(P):
+    """Head with ears, and the skin around each eye drawn into a soft dome that sits EYE["rim"] above the eyeball,
+    so the rim of the eye opening is the same small height all round (room for the hidden lids, no deep socket)."""
+    d = head_base_sdf(P)
+    for side, s in SIDES:
+        e = eye_layout()[side]
+        w = _eye_dome_weight(P, e); m = w > 0
+        if m.any():
+            dome = np.linalg.norm(P[m] - e["pivot"], axis=1) - (e["R"] + EYE["rim"])
+            d[m] = d[m] * (1 - w[m]) + dome * w[m]
+    return d
+
+
+def eye_dome_normals(P, N):
+    """Shading normals over the eye domes taken from the face without them (head_base_sdf): the domes push the eyes
+    out in silhouette, but the face still shades as one smooth surface, with no shadow ring round the eyes."""
+    N = np.array(N, float)
+    for side, s in SIDES:
+        e = eye_layout()[side]
+        q = P - e["pivot"]
+        rho = np.hypot(q @ e["u"] / e["a"], q @ e["v"] / e["b"])
+        w = (1 - _sstep(1.8, 2.3, rho)) * _sstep(0.0, 3.0, q @ e["n"])   # the whole dome, fading out past its edge
+        m = w > 0
+        if not m.any(): continue
+        Nb = sdf_normals(P[m], head_base_sdf, h=0.06)
+        Nm = N[m] * (1 - w[m, None]) + Nb * w[m, None]
+        N[m] = Nm / np.linalg.norm(Nm, axis=1, keepdims=True)
+    return N
+
+
+def face_layout():
+    """Eye pivots and frames, brow and mouth placement, all fitted to the skin."""
+    if _FACE: return _FACE
     brows = {}
     for side, s in SIDES:
         c = ray_hits(np.array([(BROW["x0"] + BROW["x1"]) * 0.5 * s, -40.0, HEAD_C[2] + BROW["dz"]]),
-                     np.array([0.0, 1.0, 0.0]), head_base_sdf)[0]
-        brows[side] = dict(center=c, n=sdf_normals(c, head_base_sdf)[0])
-    mc = ray_hits(np.array([0.0, -40.0, HEAD_C[2] + MOUTH["dz"]]), np.array([0.0, 1.0, 0.0]), head_base_sdf)[0]
-    _FACE.update(eyes=eyes, brows=brows, mouth=dict(center=mc, n=sdf_normals(mc, head_base_sdf)[0]))
+                     np.array([0.0, 1.0, 0.0]), head_skin_sdf)[0]
+        brows[side] = dict(center=c, n=sdf_normals(c, head_skin_sdf)[0])
+    mc = ray_hits(np.array([0.0, -40.0, HEAD_C[2] + MOUTH["dz"]]), np.array([0.0, 1.0, 0.0]), head_skin_sdf)[0]
+    _FACE.update(eyes=eye_layout(), brows=brows, mouth=dict(center=mc, n=sdf_normals(mc, head_skin_sdf)[0]))
     return _FACE
 
 
@@ -407,7 +442,7 @@ def eye_window_sdf(P, e):
 
 
 def head_sdf(P):
-    d = head_base_sdf(P)
+    d = head_skin_sdf(P)
     F = face_layout()
     for side, s in SIDES:
         d = smax(d, -eye_window_sdf(P, F["eyes"][side]), 0.2)
@@ -430,9 +465,14 @@ def _grid(nx, ny):
 def sphere_patch(e, radius, xs, ys):
     """Grid on the eye's sphere, parametrised by tangent-plane coordinates (x along u, y along v)."""
     X, Y = np.meshgrid(xs, ys)
-    dirs = e["n"][None] + (X.ravel()[:, None] * e["u"][None] + Y.ravel()[:, None] * e["v"][None]) / e["R"]
-    dirs /= np.linalg.norm(dirs, axis=1, keepdims=True)
-    return e["pivot"] + dirs * radius, X.ravel(), Y.ravel()
+    return e["pivot"] + sphere_dirs(e, X.ravel(), Y.ravel()) * radius, X.ravel(), Y.ravel()
+
+
+def sphere_dirs(e, X, Y):
+    """Directions from the eye's pivot to the points that sit X, Y across the eye (along u, v) on its sphere."""
+    X, Y = X / e["R"], Y / e["R"]
+    return (X[:, None] * e["u"][None] + Y[:, None] * e["v"][None]
+            + np.sqrt(np.maximum(1 - X * X - Y * Y, 0.0))[:, None] * e["n"][None])
 
 
 def keep_faces(faces, keep_vert):
@@ -453,30 +493,32 @@ def eye_pieces(side):
     nr, na = 10, 40
     rr = np.linspace(0, 1, nr); aa = np.linspace(0, 2 * math.pi, na, endpoint=False)
     X = np.outer(rr, np.cos(aa)).ravel() * IRIS["a"]; Y = np.outer(rr, np.sin(aa)).ravel() * IRIS["b"]
-    dirs = e["n"][None] + (X[:, None] * e["u"][None] + Y[:, None] * e["v"][None]) / R
-    V = e["pivot"] + dirs / np.linalg.norm(dirs, axis=1, keepdims=True) * (R + 0.08)
+    V = e["pivot"] + sphere_dirs(e, X, Y) * (R + 0.08)
     F = []
     for i in range(nr - 1):
         for j in range(na):
             j2 = (j + 1) % na
             F.append((i * na + j, i * na + j2, (i + 1) * na + j2, (i + 1) * na + j))
     out["iris"] = (V, np.array(F), np.column_stack([X / IRIS["a"], Y / IRIS["b"]]))
-    # lids: skin-coloured caps that rest hidden under the skin above and below the eye and rotate over it. They are
-    # laid out by angle (latitude about the lid axis), so a rotation by lid_close_angle covers the eye exactly.
-    xs = np.linspace(-a - 1.8, a + 1.8, 28)
+    # lids: skin-coloured caps that rest hidden under the skin above and below the eye and swing over it. Each column
+    # sits at a fixed distance x along the hinge axis u, and its rows are angles about that axis, so turning the lid
+    # bone by lid_close_angle slides the lid exactly over the eye at any eyeball size.
+    xs = np.linspace(-a - 1.1, a + 1.1, 28)
     t = np.linspace(0, 1, 18)
-    for name, sign, radius in (("lid_upper", 1.0, R + 0.26), ("lid_lower", -1.0, R + 0.14)):
+    for name, sign, radius in (("lid_upper", 1.0, R + 0.22), ("lid_lower", -1.0, R + 0.13)):
         edge = (b + 0.35 if sign > 0 else b + 0.5) - (0.3 if sign > 0 else 0.25) * b * np.clip(xs / a, -1.2, 1.2) ** 2
-        a0 = np.arctan(edge / R)                                             # latitude of the lid's edge at rest
+        ca = np.sqrt(1 - (xs / R) ** 2)                                      # cos of the column's angle off the n-v plane
+        phi0 = np.arcsin(edge / (R * ca))                                    # angle of the lid's edge about u, at rest
         span = lid_close_angle(side, "upper" if sign > 0 else "lower") + 0.12
-        lat = sign * (a0[None] + t[:, None] * span)                          # rows from the edge outward
-        lon = np.arctan(xs / R)[None].repeat(len(t), 0)
-        dirs = (np.cos(lat)[..., None] * (np.cos(lon)[..., None] * e["n"] + np.sin(lon)[..., None] * e["u"])
-                + np.sin(lat)[..., None] * e["v"]).reshape(-1, 3)
+        phi = sign * (phi0[None] + t[:, None] * span)                        # rows from the edge outward
+        X = np.repeat((xs / radius * (radius / R))[None], len(t), 0)         # sin of the column's angle
+        C = np.sqrt(1 - X ** 2)
+        dirs = (X[..., None] * e["u"] + C[..., None] * (np.cos(phi)[..., None] * e["n"]
+                                                        + np.sin(phi)[..., None] * e["v"])).reshape(-1, 3)
         V = e["pivot"] + dirs * radius
         F = _grid(len(xs), len(t))
         if sign < 0: F = F[:, ::-1]
-        dist = (np.abs(lat) - a0[None]) * R                                  # cm from the lid's edge
+        dist = (np.abs(phi) - phi0[None]) * R * ca[None]                     # cm from the lid's edge
         out[name] = (V, F, np.column_stack([(xs[None].repeat(len(t), 0) / a).ravel(), dist.ravel()]))
     return out
 
@@ -486,8 +528,8 @@ def lid_close_angle(side, which="upper"):
     of the eye, the lower lid rises to the middle."""
     e = face_layout()["eyes"][side]; R, b = e["R"], e["b"]
     if which == "upper":
-        return float(np.arctan((b + 0.35) / R) + np.arctan((b + 0.25) / R))
-    return float(np.arctan((b + 0.5) / R))
+        return float(np.arcsin((b + 0.35) / R) + np.arcsin((b + 0.25) / R))
+    return float(np.arcsin((b + 0.5) / R))
 
 
 def surface_offset(points, sdf, offset, dirs=None):
@@ -504,8 +546,8 @@ def brow_piece(side):
     us = np.linspace(0, 1, 22)
     x = (BROW["x0"] + (BROW["x1"] - BROW["x0"]) * us) * s
     zc = HEAD_C[2] + BROW["dz"] + BROW["arch"] * np.sin(math.pi * us) + BROW["slant"] * us
-    spine = surface_offset(np.column_stack([x, np.full_like(x, -40.0), zc]), head_base_sdf, 0.45)
-    N = sdf_normals(spine, head_base_sdf)
+    spine = surface_offset(np.column_stack([x, np.full_like(x, -40.0), zc]), head_skin_sdf, 0.45)
+    N = sdf_normals(spine, head_skin_sdf)
     T = np.gradient(spine, axis=0); T /= np.linalg.norm(T, axis=1, keepdims=True)
     W = np.cross(N, T); W /= np.linalg.norm(W, axis=1, keepdims=True)
     width = BROW["w"] * (0.95 + 0.15 * np.sin(math.pi * us)) * (1 - 0.25 * us)            # thick and straight
@@ -552,7 +594,7 @@ def mouth_piece():
         bot = np.minimum(bot, top - 0.04)
         x = S * sh["w"]; y = bot + (top - bot) * T
         pts = np.column_stack([x.ravel(), np.full(x.size, -40.0), c[2] + y.ravel()])
-        keys[name] = surface_offset(pts, head_base_sdf, 0.07)
+        keys[name] = surface_offset(pts, head_skin_sdf, 0.07)
     local = np.column_stack([S.ravel(), T.ravel()])
     return keys["rest"], F, local, {k: v for k, v in keys.items() if k != "rest"}
 

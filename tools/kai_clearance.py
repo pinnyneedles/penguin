@@ -60,6 +60,12 @@ bad += check("neck hidden in the tunic and collar (below the collar)", head,
 ears = lambda P: np.any([(G.ear_zone(P, s) < 1.0) & (G.ear_local(P, s)[:, 2] > 0.0) for _, s in G.SIDES], axis=0)
 for style in ("hair_tousled", "hair_spiky"):
     bad += check(f"ears clear of the {style.split('_')[1]} hair", head, G.PARTS[style][0], ears, False, 0.02)
+for side, s in G.SIDES:
+    E, e = G.eye_pieces(side), G.face_layout()["eyes"][side]
+    lids = np.vstack([E["lid_upper"][0], E["lid_lower"][0]])
+    bad += check(f"eyelids rest hidden under the skin ({side})", lids, G.head_sdf, lambda P: np.ones(len(P), bool), True, 0.1)
+    rho = lambda P: np.hypot((P - e["pivot"]) @ e["u"] / e["a"], (P - e["pivot"]) @ e["v"] / e["b"])
+    bad += check(f"eye white covered outside the opening ({side})", E["sclera"][0], G.head_sdf, lambda P: rho(P) > 1.06, True, 0.1)
 sash = surface(G.sash_sdf, G.SASH_BOX)
 bad += check("sash band and tails sit on the tunic (knot excluded)", sash, G.tunic_sdf,
              lambda P: np.linalg.norm(P - G.sash_knot(), axis=1) > 2.6, False, 0.02)

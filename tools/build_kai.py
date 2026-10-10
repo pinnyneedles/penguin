@@ -264,11 +264,11 @@ PARTS, OFFS, PIECES = {}, {}, {}
 for slot, (name, h, budget, tex, default) in SLOTS.items():
     pieces = build_pieces(slot)
     ob, offs = assemble(slot, pieces, CHAR if default else ALT)
-    if slot == "head":                           # toon shading normals for the ears (see G.ear_normals)
+    if slot == "head":                           # toon shading normals for the ears and eye domes (see G)
         me = ob.data; Pv = np.empty(len(me.vertices) * 3); me.vertices.foreach_get("co", Pv); Pv = Pv.reshape(-1, 3)
         Nv = np.empty(len(me.vertices) * 3); me.vertex_normals.foreach_get("vector", Nv); Nv = Nv.reshape(-1, 3)
         nb = len(pieces[0].V)
-        Nv[:nb] = G.ear_normals(Pv[:nb], Nv[:nb])
+        Nv[:nb] = G.eye_dome_normals(Pv[:nb], G.ear_normals(Pv[:nb], Nv[:nb]))
         me.normals_split_custom_set_from_vertices(Nv.tolist())
     nm = 2 if slot == "head" else 1
     unwrap(ob, nm)
