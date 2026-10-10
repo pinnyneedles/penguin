@@ -198,6 +198,40 @@ to rebuild.
 
 ![kit vignette](props/Kit/Previews/Kit_Vignette.png)
 
+## Kai (modular toon kid for a platformer)
+
+**Download for Unreal:** [`dist/Kai_Unreal.zip`](dist/Kai_Unreal.zip) has every part as a skeletal mesh on one
+shared skeleton, the whole outfit as a single mesh, the textures, reference data, previews and the Blender source with
+a posing rig. Its `IMPORT_GUIDE.html` walks through importing into Unreal Engine 5, a two-tone toon material, a
+Character Blueprint with swappable parts (Leader Pose), the face controls and retargeting Mannequin animations. The
+guide's source is `kai/IMPORT_GUIDE.md`, and `python3 tools/package_kai_unreal.py` rebuilds the zip (it runs the
+clipping checks and the FBX verification first).
+
+`kai/` is Kai, a young island sailor boy in a Wind Waker-style toon look: red sailor shirt with a navy collar, yellow
+sash and neckerchief, rolled khaki trousers and sandals. He is 102.9 cm tall and modular: head, two hairstyles, arms,
+shirt, trousers, calves, sandals, sash and neckerchief are separate meshes (73,666 triangles for the default outfit)
+that fit together in any combination without clipping.
+
+![kai](kai/Preview_Turnaround.png)
+
+**Skeleton (85 bones).** The body uses the Unreal 5 Mannequin names, from `root` and `pelvis` through `spine_01` to
+`spine_05`, the arms with 15 finger bones per hand, and the legs to `ball`, plus the Mannequin IK goal bones, so
+Mannequin animations retarget onto him. Extra bones drive the eyes, eyelids and brows, the hair, the sash tails, the
+back of the collar and the neckerchief. The head has five mouth morph targets.
+
+**Clothes that move.** The shirt opens at the hem, sleeves and cuffs like real cloth, and its skirt hands over to the
+thighs toward the hem, so running, jumping, crouch landings, knee lifts to 70°, back swings to 40° and side steps to
+45° stay clear of clipping (`tools/kai_pose_check.py`).
+
+| Script | What it does |
+|---|---|
+| `tools/kai_geometry.py` | Every shape (signed distance functions), the skeleton and the face rig |
+| `tools/kai_textures.py` | Colours and painted details |
+| `tools/build_kai.py` | Meshes, skin weights, textures, morph targets, posing rig, FBX export (`--out kai`) |
+| `tools/render_kai.py` | Preview renders |
+| `tools/kai_clearance.py`, `tools/kai_pose_check.py`, `tools/verify_kai.py` | Clipping at rest, clipping in leg poses, exported-file checks |
+| `tools/package_kai_unreal.py` | Builds `dist/Kai_Unreal.zip` |
+
 ## Crab (rigged enemy)
 
 **Download for Unreal:** [`dist/Crab_Unreal.zip`](dist/Crab_Unreal.zip) has the skeletal mesh with three lower levels

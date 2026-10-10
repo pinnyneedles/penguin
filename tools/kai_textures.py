@@ -17,7 +17,7 @@ def rgb(*c):
 
 PAL = dict(
     skin=rgb(252, 206, 160), skin_shadow=rgb(236, 170, 130), blush=rgb(246, 150, 130), lash=rgb(52, 28, 22),
-    hair=rgb(92, 52, 30), hair_hi=rgb(140, 86, 48), brow=rgb(70, 38, 22),
+    hair=rgb(132, 82, 46), hair_hi=rgb(160, 106, 62), brow=rgb(70, 38, 22),
     mouth=rgb(118, 34, 30), tongue=rgb(228, 108, 100),
     white=rgb(252, 252, 247), white_shade=rgb(214, 224, 238), iris=rgb(36, 86, 150), iris_hi=rgb(92, 152, 212),
     iris_dark=rgb(14, 28, 62), pupil=rgb(12, 12, 20),
@@ -208,8 +208,8 @@ def paint_tunic(a):
     if cm.any():
         edge = -G.collar_region(P[cm])
         c = np.tile(PAL["navy"], (cm.sum(), 1))
-        c[(np.abs(edge - 0.75) < 0.2) | (np.abs(edge - 1.35) < 0.2)] = PAL["white"]
-        col[cm] = c
+        stripe = np.maximum(sstep(0.32, 0.24, np.abs(edge - 0.72)), sstep(0.32, 0.24, np.abs(edge - 1.55)))
+        col[cm] = mix(c, PAL["white"], stripe)                        # two even white stripes, soft-edged texels
     return col
 
 
@@ -264,7 +264,10 @@ def paint_sash(a):
     band = np.abs(P[:, 2] - zc) < 2.6
     col[band & (np.abs(np.abs(P[:, 2] - zc) - 1.75) < 0.25)] = PAL["sash_edge"]
     tails = P[:, 2] < zc - 3.0
-    col[tails & (P[:, 2] < zc - 11.0)] = PAL["sash_edge"]
+    k = G.sash_knot()
+    for pts, w in G.sash_tail_points():                              # an orange band across each tail near its end
+        near = tails & (np.linalg.norm(P - pts[-1], axis=1) < 4.0)
+        col[near & (np.abs(np.linalg.norm(P - pts[-1], axis=1) - 2.6) < 0.35)] = PAL["sash_edge"]
     return col
 
 

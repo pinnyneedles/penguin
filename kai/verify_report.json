@@ -1,0 +1,292 @@
+{
+  "ok": true,
+  "failures": [],
+  "files": {
+    "SK_Kai": {
+      "file": "SK_Kai.fbx",
+      "size_mb": 6.22,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai": {
+          "triangles": 73665,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Head",
+            "M_Kai_Eye",
+            "M_Kai_Hair_Tousled",
+            "M_Kai_Arms",
+            "M_Kai_Tunic",
+            "M_Kai_Pants",
+            "M_Kai_Legs",
+            "M_Kai_Sandals",
+            "M_Kai_Sash",
+            "M_Kai_Neckerchief"
+          ],
+          "morph_targets": [
+            "Mouth_Smile",
+            "Mouth_Open",
+            "Mouth_Shout",
+            "Mouth_O",
+            "Mouth_Frown"
+          ],
+          "custom_normals": true
+        }
+      },
+      "triangles": 73665,
+      "height_cm": 102.85
+    },
+    "SK_Kai_Arms": {
+      "file": "SK_Kai_Arms.fbx",
+      "size_mb": 0.82,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Arms": {
+          "triangles": 9000,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Arms"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 9000,
+      "height_cm": 29.14
+    },
+    "SK_Kai_Hair_Spiky": {
+      "file": "SK_Kai_Hair_Spiky.fbx",
+      "size_mb": 0.79,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Hair_Spiky": {
+          "triangles": 7998,
+          "max_influences": 3,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Hair_Spiky"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 7998,
+      "height_cm": 35.65
+    },
+    "SK_Kai_Hair_Tousled": {
+      "file": "SK_Kai_Hair_Tousled.fbx",
+      "size_mb": 0.79,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Hair_Tousled": {
+          "triangles": 7999,
+          "max_influences": 3,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Hair_Tousled"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 7999,
+      "height_cm": 35.64
+    },
+    "SK_Kai_Head": {
+      "file": "SK_Kai_Head.fbx",
+      "size_mb": 1.59,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Head": {
+          "triangles": 21066,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Head",
+            "M_Kai_Eye"
+          ],
+          "morph_targets": [
+            "Mouth_Smile",
+            "Mouth_Open",
+            "Mouth_Shout",
+            "Mouth_O",
+            "Mouth_Frown"
+          ],
+          "custom_normals": true
+        }
+      },
+      "triangles": 21066,
+      "height_cm": 46.46
+    },
+    "SK_Kai_Legs": {
+      "file": "SK_Kai_Legs.fbx",
+      "size_mb": 0.38,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Legs": {
+          "triangles": 3000,
+          "max_influences": 3,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Legs"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 3000,
+      "height_cm": 12.17
+    },
+    "SK_Kai_Neckerchief": {
+      "file": "SK_Kai_Neckerchief.fbx",
+      "size_mb": 0.3,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Neckerchief": {
+          "triangles": 1600,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Neckerchief"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 1600,
+      "height_cm": 5.47
+    },
+    "SK_Kai_Pants": {
+      "file": "SK_Kai_Pants.fbx",
+      "size_mb": 0.62,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Pants": {
+          "triangles": 6000,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Pants"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 6000,
+      "height_cm": 31.75
+    },
+    "SK_Kai_Sandals": {
+      "file": "SK_Kai_Sandals.fbx",
+      "size_mb": 0.91,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Sandals": {
+          "triangles": 9000,
+          "max_influences": 2,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Sandals"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 9000,
+      "height_cm": 7.15
+    },
+    "SK_Kai_Sash": {
+      "file": "SK_Kai_Sash.fbx",
+      "size_mb": 0.43,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Sash": {
+          "triangles": 3000,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Sash"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 3000,
+      "height_cm": 13.47
+    },
+    "SK_Kai_Tunic": {
+      "file": "SK_Kai_Tunic.fbx",
+      "size_mb": 1.61,
+      "bones": 85,
+      "rest_pose_max_error_cm": 0.0,
+      "meshes": {
+        "SK_Kai_Tunic": {
+          "triangles": 13000,
+          "max_influences": 4,
+          "unweighted": 0,
+          "weight_sum_range": [
+            1.0,
+            1.0
+          ],
+          "materials": [
+            "M_Kai_Tunic"
+          ],
+          "morph_targets": [],
+          "custom_normals": true
+        }
+      },
+      "triangles": 13000,
+      "height_cm": 29.56
+    }
+  }
+}

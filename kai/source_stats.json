@@ -1,0 +1,157 @@
+{
+  "name": "Kai",
+  "height_cm": 102.9,
+  "bones": 85,
+  "exported_bones": 85,
+  "fps": 30,
+  "units": "cm",
+  "parts": {
+    "SK_Kai_Head": {
+      "slot": "head",
+      "default_outfit": true,
+      "vertices": 10966,
+      "triangles": 21066,
+      "materials": [
+        "M_Kai_Head",
+        "M_Kai_Eye"
+      ],
+      "bones_weighted": 18,
+      "max_influences": 4
+    },
+    "SK_Kai_Hair_Tousled": {
+      "slot": "hair_tousled",
+      "default_outfit": true,
+      "vertices": 3992,
+      "triangles": 8000,
+      "materials": [
+        "M_Kai_Hair_Tousled"
+      ],
+      "bones_weighted": 6,
+      "max_influences": 3
+    },
+    "SK_Kai_Hair_Spiky": {
+      "slot": "hair_spiky",
+      "default_outfit": false,
+      "vertices": 4000,
+      "triangles": 8000,
+      "materials": [
+        "M_Kai_Hair_Spiky"
+      ],
+      "bones_weighted": 7,
+      "max_influences": 3
+    },
+    "SK_Kai_Arms": {
+      "slot": "arms",
+      "default_outfit": true,
+      "vertices": 4498,
+      "triangles": 9000,
+      "materials": [
+        "M_Kai_Arms"
+      ],
+      "bones_weighted": 45,
+      "max_influences": 4
+    },
+    "SK_Kai_Tunic": {
+      "slot": "tunic",
+      "default_outfit": true,
+      "vertices": 6006,
+      "triangles": 13000,
+      "materials": [
+        "M_Kai_Tunic"
+      ],
+      "bones_weighted": 16,
+      "max_influences": 4
+    },
+    "SK_Kai_Pants": {
+      "slot": "pants",
+      "default_outfit": true,
+      "vertices": 3002,
+      "triangles": 6000,
+      "materials": [
+        "M_Kai_Pants"
+      ],
+      "bones_weighted": 10,
+      "max_influences": 4
+    },
+    "SK_Kai_Legs": {
+      "slot": "legs",
+      "default_outfit": true,
+      "vertices": 1504,
+      "triangles": 3000,
+      "materials": [
+        "M_Kai_Legs"
+      ],
+      "bones_weighted": 6,
+      "max_influences": 3
+    },
+    "SK_Kai_Sandals": {
+      "slot": "sandals",
+      "default_outfit": true,
+      "vertices": 4492,
+      "triangles": 9000,
+      "materials": [
+        "M_Kai_Sandals"
+      ],
+      "bones_weighted": 6,
+      "max_influences": 2
+    },
+    "SK_Kai_Sash": {
+      "slot": "sash",
+      "default_outfit": true,
+      "vertices": 1500,
+      "triangles": 3000,
+      "materials": [
+        "M_Kai_Sash"
+      ],
+      "bones_weighted": 10,
+      "max_influences": 4
+    },
+    "SK_Kai_Neckerchief": {
+      "slot": "neckerchief",
+      "default_outfit": true,
+      "vertices": 802,
+      "triangles": 1600,
+      "materials": [
+        "M_Kai_Neckerchief"
+      ],
+      "bones_weighted": 6,
+      "max_influences": 4
+    }
+  },
+  "shape_keys": [
+    "Mouth_Smile",
+    "Mouth_Open",
+    "Mouth_Shout",
+    "Mouth_O",
+    "Mouth_Frown"
+  ],
+  "lid_close_deg": {
+    "L": {
+      "upper": 68.1,
+      "lower": 35.5
+    },
+    "R": {
+      "upper": 68.1,
+      "lower": 35.5
+    }
+  },
+  "posing_rig": {
+    "calf_l": {
+      "pole_angle_deg": 89.88,
+      "rest_error_deg": 0.0
+    },
+    "lowerarm_l": {
+      "pole_angle_deg": -186.72,
+      "rest_error_deg": 0.6807
+    },
+    "calf_r": {
+      "pole_angle_deg": 90.04,
+      "rest_error_deg": 0.0
+    },
+    "lowerarm_r": {
+      "pole_angle_deg": 0.64,
+      "rest_error_deg": 0.0
+    }
+  },
+  "default_outfit_triangles": 73666
+}

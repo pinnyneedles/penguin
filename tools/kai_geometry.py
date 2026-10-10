@@ -185,11 +185,15 @@ def hand_frame(s):
 
 HAND_K = 1.2
 FINGERS = [  # name, base offset along (f, t, n) from the wrist, segment lengths, radius, splay, curl (degrees)
-    ("index", (5.4, 1.75, 0.15), (1.9, 1.35, 1.15), 0.8, 6, 14),
-    ("middle", (5.7, 0.55, 0.2), (2.05, 1.45, 1.2), 0.82, 1, 16),
-    ("ring", (5.5, -0.65, 0.15), (1.9, 1.35, 1.1), 0.78, -4, 18),
-    ("pinky", (5.0, -1.75, 0.05), (1.55, 1.1, 0.95), 0.7, -10, 20),
+    # a kid's toon hand: shorter, thicker fingers than an adult's, kept apart, in a light relaxed curl
+    ("index", (5.35, 2.05, 0.15), (1.596, 1.134, 0.966), 0.896, 8, 9),
+    ("middle", (5.6, 0.68, 0.2), (1.722, 1.218, 1.008), 0.918, 1, 10),
+    ("ring", (5.4, -0.74, 0.15), (1.596, 1.134, 0.924), 0.874, -6, 11),
+    ("pinky", (4.95, -2.0, 0.05), (1.302, 0.924, 0.798), 0.784, -13, 12),
 ]
+THUMB = dict(base=(1.6, 2.0, -0.6), dir=(0.55, 0.7, -0.45), segs=((1.75, 0.0), (1.35, 12.0), (1.12, 14.0)), r=1.0)
+PALM = dict(c=(2.95, -0.1, 0.1), r=(3.0, 3.0, 1.5))           # along (f, t, n) from the wrist, before HAND_K
+FINGER_TAPER = (1.03, 1.0, 0.96, 0.93)                        # radius at each joint, times the finger's radius
 
 
 def finger_points(s, name):
@@ -206,13 +210,14 @@ def finger_points(s, name):
             p = p + dd * L * k; pts.append(p)
         return pts, r * k
     if name == "thumb":
-        p = W + (f * 1.6 + t * 2.0 - n * 0.6) * k
-        d = nrm(f * 0.55 + t * 0.7 - n * 0.45)
+        bf, bt, bn = THUMB["base"]; df, dt, dn = THUMB["dir"]
+        p = W + (f * bf + t * bt + n * bn) * k
+        d = nrm(f * df + t * dt + n * dn)
         pts = [p]
-        for L, bend in ((1.9, 0.0), (1.5, 12.0), (1.25, 14.0)):
+        for L, bend in THUMB["segs"]:
             d = nrm(d * math.cos(math.radians(bend)) + f * math.sin(math.radians(bend)))
             p = p + d * L * k; pts.append(p)
-        return pts, 0.97 * k
+        return pts, THUMB["r"] * k
     raise KeyError(name)
 
 
@@ -262,8 +267,8 @@ def head_core_sdf(P):
     d = sd_ellipsoid(P, C, np.array([16.6, 17.2, 17.4]))
     d = smin(d, sd_ellipsoid(P, C + [0, -2.8, -6.4], np.array([14.6, 13.6, 12.6])), 5.0)       # cheeks and jaw
     d = smin(d, sd_ellipsoid(P, C + [0, -8.6, -14.6], np.array([5.6, 5.0, 4.4])), 4.0)        # chin
-    d = smin(d, sd_ellipsoid(P, C + [0, -16.0, -5.5], np.array([1.1, 1.8, 1.3]),
-                             rot_axes([1, 0, 0], [0, 1, 0.25])), 1.3)                                # small pointed nose
+    d = smin(d, sd_ellipsoid(P, C + [0, -16.35, -5.6], np.array([1.35, 1.9, 1.45]),
+                             rot_axes([1, 0, 0], [0, 1, 0.25])), 1.2)                                # small round nose
     return smin(d, sd_capsule(P, (0, 0.6, Z["neck"] - 1.5), (0, 0.8, C[2] - 8.0), 4.75), 2.5)     # neck
 
 
@@ -571,12 +576,12 @@ def brow_piece(side):
 
 
 MOUTH_SHAPES = {   # top and bottom edge of the mouth as functions of s in -1..1 (cm, relative to the mouth centre)
-    "rest": dict(w=2.7, top=lambda s: 0.5 * s * s + 0.06, bot=lambda s: 0.5 * s * s - 0.22 * (1 - s * s)),
-    "Mouth_Smile": dict(w=2.9, top=lambda s: 0.95 * s * s - 0.05, bot=lambda s: 0.95 * s * s - 0.65 * (1 - s * s) ** 0.8),
-    "Mouth_Open": dict(w=2.4, top=lambda s: 0.25 * s * s + 0.1, bot=lambda s: 0.25 * s * s - 2.0 * (1 - s * s) ** 0.75),
-    "Mouth_Shout": dict(w=2.9, top=lambda s: 0.55 * (1 - s * s) ** 0.6 + 0.15 * s * s, bot=lambda s: -2.6 * (1 - s * s) ** 0.6),
-    "Mouth_O": dict(w=1.25, top=lambda s: 0.85 * (1 - s * s) ** 0.5, bot=lambda s: -1.2 * (1 - s * s) ** 0.5),
-    "Mouth_Frown": dict(w=2.0, top=lambda s: -0.45 * s * s + 0.1, bot=lambda s: -0.45 * s * s - 0.12 * (1 - s * s)),
+    "rest": dict(w=3.4, top=lambda s: 0.55 * s * s + 0.08, bot=lambda s: 0.55 * s * s - 0.36 * (1 - s * s) ** 0.8),
+    "Mouth_Smile": dict(w=3.4, top=lambda s: 1.05 * s * s - 0.05, bot=lambda s: 1.05 * s * s - 0.85 * (1 - s * s) ** 0.8),
+    "Mouth_Open": dict(w=2.9, top=lambda s: 0.3 * s * s + 0.12, bot=lambda s: 0.3 * s * s - 2.3 * (1 - s * s) ** 0.75),
+    "Mouth_Shout": dict(w=3.4, top=lambda s: 0.62 * (1 - s * s) ** 0.6 + 0.17 * s * s, bot=lambda s: -2.9 * (1 - s * s) ** 0.6),
+    "Mouth_O": dict(w=1.55, top=lambda s: 1.0 * (1 - s * s) ** 0.5, bot=lambda s: -1.45 * (1 - s * s) ** 0.5),
+    "Mouth_Frown": dict(w=2.7, top=lambda s: -0.55 * s * s + 0.12, bot=lambda s: -0.55 * s * s - 0.2 * (1 - s * s)),
 }
 
 
@@ -646,9 +651,9 @@ def collar_region(P):
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     zs = Z["shoulder"]
     back = np.maximum.reduce([np.abs(x) - 8.8, (zs - 8.2) - z, -y - 1.0])
-    band = (zs - 1.4) - z
     vx = np.abs(x) - 0.62 * (z - (Z["chest"] + 0.6))
-    lapel = np.maximum.reduce([-vx, vx - 3.3, -(y + 1.0), Z["chest"] - z])
+    band = np.maximum((zs - 1.4) - z, np.minimum(vx, y + 1.0))           # over the shoulders, open in the V
+    lapel = np.maximum.reduce([-vx, vx - 3.8, -(y + 1.0), Z["chest"] - z])
     return np.minimum(np.minimum(back, band), lapel)
 
 
@@ -826,12 +831,13 @@ def arm_skin_sdf(P, s):
     d1 = nrm(E - S)
     h = sd_chain(P, [S - d1 * 1.2, E, W], [3.2, 2.8, 2.2], 0.7)
     R = np.column_stack([f, t, n])
-    h = smin(h, sd_ellipsoid(P, W + (f * 3.0 + n * 0.1 - t * 0.1) * k, np.array([3.05, 2.75, 1.4]) * k, R), 1.5)
+    pf, pt, pn = PALM["c"]
+    h = smin(h, sd_ellipsoid(P, W + (f * pf + t * pt + n * pn) * k, np.array(PALM["r"]) * k, R), 1.5)
     fingers = None
     for fn in ("thumb", "index", "middle", "ring", "pinky"):
         pts, r = finger_points(s, fn)
         if fn == "thumb": pts = [pts[0] - (pts[1] - pts[0]) * 0.4] + pts[1:]
-        fg = sd_chain(P, pts, [r * 1.05, r, r * 0.92, r * 0.86], 0.25)
+        fg = sd_chain(P, pts, [r * x for x in FINGER_TAPER], 0.25)
         fingers = fg if fingers is None else smin(fingers, fg, 0.12)
     return smin(h, fingers, 0.7)
 
@@ -874,10 +880,10 @@ def sash_tail_points():
     if "tails" in _SASH: return _SASH["tails"]
     out = []
     k = sash_knot()
-    for (ang, spread), w in (((-14.0, 0.6), (1.5, 1.6, 1.85, 2.05)), ((10.0, 1.4), (1.4, 1.5, 1.7, 1.8))):
+    for (ang, spread, seg), w in (((-14.0, 0.6, 3.35), (1.55, 1.6, 1.7, 1.75)), ((10.0, 1.4, 2.6), (1.45, 1.5, 1.55, 1.6))):
         pts = [k + np.array([0, 0, -0.9])]
         for j in range(1, 4):
-            z = k[2] - 0.9 - 3.4 * j
+            z = k[2] - 0.9 - seg * j
             a = math.atan2(k[0], -(k[1] - 0.4)) + math.radians(ang) * j / 3.0
             p = np.array([math.sin(a), -math.cos(a) + 0.4 / 30, 0.0]) * 10.0
             pts.append(_on_tunic(np.array([p[0], p[1], z]), 0.95 + 0.15 * j + spread * 0.1 * j))
@@ -886,14 +892,23 @@ def sash_tail_points():
     return out
 
 
+def end_cut(P, tip, down, across, slant):
+    """Positive beyond a ribbon's end: a straight cut through tip, slanted by `slant` degrees across the ribbon."""
+    a = math.radians(slant)
+    return (P - tip) @ nrm(down * math.cos(a) + across * math.sin(a))
+
+
 def sash_sdf(P):
-    band = smax(shell(tunic_sdf(P), 0.78, 1.3), np.abs(P[:, 2] - (Z["waist"] - 1.2)) - 2.3, 0.45)   # hugs the tunic
+    band = smax(shell(tunic_sdf(P), 0.55, 0.9), np.abs(P[:, 2] - (Z["waist"] - 1.2)) - 2.1, 0.4)   # hugs the tunic
     k = sash_knot(); out = nrm(np.array([k[0], k[1] - 0.4, 0.0]))
-    knot = sd_ellipsoid(P, k, np.array([2.0, 1.4, 1.75]), rot_axes(np.cross(UP, out), UP))
-    d = smin(band, knot, 0.8)
-    for pts, w in sash_tail_points():                               # each ribbon lies flat on the skirt beneath it
+    knot = sd_ellipsoid(P, k, np.array([1.9, 1.3, 1.65]), rot_axes(np.cross(UP, out), UP))
+    d = smin(band, knot, 0.7)
+    for j, (pts, w) in enumerate(sash_tail_points()):              # each ribbon lies flat on the skirt beneath it
         nt = nrm(sdf_normals(np.array(pts[1:]), tunic_sdf).mean(0))
-        d = smin(d, flat_chain(P, pts, w, nt, 2.8), 0.6)
+        tail = flat_chain(P, pts, w, nt, 2.8)
+        down = nrm(pts[-1] - pts[-2]); across = nrm(np.cross(nt, down))
+        tail = smax(tail, end_cut(P, pts[-1] - down * 0.4, down, across, 28 if j == 0 else -28), 0.12)  # cut on a slant
+        d = smin(d, tail, 0.6)
     return d
 
 
@@ -902,10 +917,13 @@ SASH_BOX = ((-15, 16), (-13, 13), (Z["waist"] - 15, Z["waist"] + 5))
 
 def neckerchief_sdf(P):
     c = np.array([0, -8.2, Z["chest"] + 1.1])
-    d = sd_ellipsoid(P, c, np.array([2.0, 1.3, 1.6]))
-    for s in (1, -1):
-        pts = [c + np.array([0.5 * s, -0.2, -0.8]), c + np.array([1.7 * s, -0.5, -3.2]), c + np.array([2.5 * s, -0.7, -6.0])]
-        d = smin(d, flat_chain(P, pts, (1.15, 1.55, 0.12), [0, -1, 0.15], 2.8), 0.5)
+    d = sd_ellipsoid(P, c, np.array([1.55, 1.15, 1.3]))
+    for s in (1, -1):                                               # two short tails splayed in an upside-down V
+        pts = [c + np.array([0.45 * s, -0.25, -0.7]), c + np.array([1.6 * s, -0.55, -2.6]), c + np.array([2.6 * s, -0.75, -4.4])]
+        tail = flat_chain(P, pts, (0.9, 1.0, 1.05), [0, -1, 0.15], 2.8)
+        down = nrm(pts[-1] - pts[-2]); across = nrm(np.cross(np.array([0, -1, 0.15]), down))
+        tail = smax(tail, end_cut(P, pts[-1] - down * 0.3, down, across, -30 * s), 0.1)   # ends cut on a slant
+        d = smin(d, tail, 0.45)
     return d
 
 
@@ -933,7 +951,7 @@ def hairline_el(phi):
     """Elevation (degrees) of the hairline around the head: high on the forehead, above the ears, low at the nape."""
     a = np.abs(phi)
     front = 30.0 + 0 * a
-    side = np.interp(a, [0, 40, 70, 95, 120, 180], [30.0, 26.0, 14.0, 12.0, -10.0, -32.0])
+    side = np.interp(a, [0, 40, 70, 95, 120, 150, 180], [30.0, 26.0, 14.0, 12.0, -10.0, -36.0, -48.0])
     return side
 
 
@@ -970,8 +988,8 @@ TOUSLED = dict(thick=1.2, clumps=[   # (root (phi, el), tip (phi, el), half widt
     # over and behind the ears, flicking out
     ((-100, 64), (-104, 8), 3.6, 2.2), ((100, 64), (104, 8), 3.6, 2.2),
     # back: locks from the crown down to the nape, flaring out
-    ((-135, 70), (-132, -20), 4.3, 2.8), ((135, 70), (132, -20), 4.3, 2.8),
-    ((-160, 68), (-158, -30), 4.4, 3.0), ((160, 68), (158, -30), 4.4, 3.0),
+    ((-135, 70), (-132, -24), 4.5, 2.6), ((135, 70), (132, -24), 4.5, 2.6),
+    ((-160, 68), (-158, -32), 4.6, 2.8), ((160, 68), (158, -32), 4.6, 2.8),
     # top: volume over the crown, and two swept-back spikes
     ((60, 84), (95, 60), 4.4, 1.6), ((-60, 84), (-95, 60), 4.4, 1.6), ((120, 80), (130, 40), 4.6, 2.6),
     ((-120, 80), (-130, 40), 4.6, 2.6),

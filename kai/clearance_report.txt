@@ -1,0 +1,19 @@
+pants hidden under the tunic (above the hem)         samples  12197  through     0  worst -0.418 cm
+calves hidden in the pants legs (above the cuff)     samples   2372  through     0  worst -0.601 cm
+upper arms hidden in the sleeves                     samples   7065  through     0  worst -0.395 cm
+neck hidden in the tunic and collar (below the collar) samples   1909  through     0  worst -0.405 cm
+pants clear of the shirt's cloth inside the skirt    samples   6883  through     0  worst +0.367 cm
+calves clear of the trouser cloth at the cuffs       samples   5082  through     0  worst +0.600 cm
+arms clear of the sleeve cloth at the sleeve ends    samples  12602  through     0  worst +0.212 cm
+ears clear of the tousled hair                       samples   3096  through     0  worst +0.401 cm
+ears clear of the spiky hair                         samples   3096  through     0  worst +0.665 cm
+eyelids rest hidden under the skin (L)               samples   1008  through     0  worst -0.157 cm
+eye white covered outside the opening (L)            samples    408  through     0  worst -0.244 cm
+eyelids rest hidden under the skin (R)               samples   1008  through     0  worst -0.157 cm
+eye white covered outside the opening (R)            samples    408  through     0  worst -0.244 cm
+sash band and tails sit on the tunic (knot excluded) samples  10439  through     0  worst +0.099 cm
+neckerchief sits on the tunic                        samples    834  through     0  worst +0.370 cm
+collar sits on the tunic                             samples  15118  through     0  worst +0.172 cm
+calves clear of the sandals outside the ankle strap  samples   7676  through     0  worst +0.118 cm
+calf ends are hidden inside the ankle strap          samples    508  through     0  worst -0.289 cm
+CLEARANCE_OK

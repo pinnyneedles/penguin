@@ -1,0 +1,11 @@
+-- supported
+run stride           Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+jump tuck            Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+crouch landing       Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+knee lift 70         Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+kick back 40         Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+step out 45          Tunic/Pants    0  Sash/Pants    0  Tunic/Legs    0
+-- beyond the supported range
+knee lift 85         Tunic/Pants   71  Sash/Pants    5  Tunic/Legs    0
+climb pull-up 95     Tunic/Pants  124  Sash/Pants  184  Tunic/Legs    0
+POSE_CHECK_OK

@@ -35,7 +35,7 @@ SLOTS = {
     "hair_tousled": ("SK_Kai_Hair_Tousled", 0.26, 8000, 1024, True),
     "hair_spiky": ("SK_Kai_Hair_Spiky", 0.26, 8000, 1024, False),
     "arms": ("SK_Kai_Arms", 0.15, 9000, 1024, True),
-    "tunic": ("SK_Kai_Tunic", 0.22, 10000, 2048, True),
+    "tunic": ("SK_Kai_Tunic", 0.2, 13000, 2048, True),
     "pants": ("SK_Kai_Pants", 0.24, 6000, 1024, True),
     "legs": ("SK_Kai_Legs", 0.18, 3000, 1024, True),
     "sandals": ("SK_Kai_Sandals", 0.12, 9000, 1024, True),
