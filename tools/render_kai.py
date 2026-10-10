@@ -179,6 +179,12 @@ if "closeup" in ONLY:
              shot(os.path.join(FRAMES, "close_3q.png"), (150, -380, C[2] + 4), C + np.array([0, 0, -4.0]), 50, 520, 520),
              shot(os.path.join(FRAMES, "close_side.png"), (400, 0, C[2] - 2), C + np.array([0, 2.0, -4.0]), 50, 520, 520)]
     sheet(paths, ["Face, front", "Face, three-quarter", "Face, side"], 3, os.path.join(D, "Preview_Face.png"))
+    O, b, v, n = G.ear_frame(1.0)
+    ec = O + b * 2.0
+    ears = [shot(os.path.join(FRAMES, "ear_side.png"), ec + n * 300, ec, 22, 420, 420),
+            shot(os.path.join(FRAMES, "ear_front.png"), ec + np.array([40, -300, 20]), ec + np.array([-3, 0, 0]), 30, 420, 420),
+            shot(os.path.join(FRAMES, "ear_back.png"), ec + np.array([160, 260, 40]), ec, 26, 420, 420)]
+    sheet(ears, ["Ear, side", "Ear, from the front", "Ear, from behind"], 3, os.path.join(D, "Preview_Ears.png"))
     feet = [shot(os.path.join(FRAMES, "feet_3q.png"), (90, -160, 40), (0, -5, 4), 34, 520, 360),
             shot(os.path.join(FRAMES, "feet_side.png"), (200, -20, 12), (7, -4, 4), 26, 520, 360),
             shot(os.path.join(FRAMES, "feet_back.png"), (-60, 160, 45), (0, -2, 4), 34, 520, 360)]

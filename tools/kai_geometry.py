@@ -248,29 +248,82 @@ def sdf_normals(P, sdf, h=0.02):
 # ---------------------------------------------------------------------------
 # Head
 # ---------------------------------------------------------------------------
-EAR = dict(off=(15.8, 1.8, -3.6), r=(2.2, 3.5, 4.7))
+EAR = dict(dy=1.6, dz=-3.2)                            # where the ear's front edge meets the head
 EYE = dict(x=6.9, dz=-3.4, a=4.0, b=5.3, tilt=5.0)    # centre, half width, half height (cm), lean of the tops (deg)
 IRIS = dict(a=2.75, b=3.45)                            # iris half width and half height
 BROW = dict(dz=4.9, x0=2.3, x1=10.4, arch=0.5, slant=0.35, w=1.95, t=0.9)
 MOUTH = dict(dz=-12.4)
 
 
-def head_base_sdf(P):
-    """Head without eye windows: big round cranium, soft cheeks, small chin, button nose, round ears, neck and a
-    patch of upper chest for the tunic's V-neck."""
+def head_core_sdf(P):
+    """Head without ears or eye windows: big round cranium, soft cheeks, small chin, small pointed nose, neck."""
     C = HEAD_C
     d = sd_ellipsoid(P, C, np.array([16.6, 17.2, 17.4]))
     d = smin(d, sd_ellipsoid(P, C + [0, -2.8, -6.4], np.array([14.6, 13.6, 12.6])), 5.0)       # cheeks and jaw
     d = smin(d, sd_ellipsoid(P, C + [0, -8.6, -14.6], np.array([5.6, 5.0, 4.4])), 4.0)        # chin
     d = smin(d, sd_ellipsoid(P, C + [0, -16.0, -5.5], np.array([1.1, 1.8, 1.3]),
                              rot_axes([1, 0, 0], [0, 1, 0.25])), 1.3)                                # small pointed nose
+    return smin(d, sd_capsule(P, (0, 0.6, Z["neck"] - 1.5), (0, 0.8, C[2] - 8.0), 4.75), 2.5)     # neck
+
+
+_EAR = {}
+
+
+def ear_frame(s):
+    """Origin on the side of the head and the ear's axes: u toward the back, v up (leaning back), n out of the ear."""
+    key = float(s)
+    if key in _EAR: return _EAR[key]
+    n = nrm([0.86 * s, -0.36, 0.08])                                  # faces out and a little forward
+    v = nrm(UP - n * (n @ UP))
+    b = nrm(np.cross(n, v)); b = b if b[1] > 0 else -b
+    lean = math.radians(14)                                            # the top of the ear leans back
+    v, b = nrm(v * math.cos(lean) + b * math.sin(lean)), nrm(b * math.cos(lean) - v * math.sin(lean))
+    z = HEAD_C[2] + EAR["dz"]
+    O = ray_hits(np.array([30.0 * s, HEAD_C[1] + EAR["dy"], z]), np.array([-s, 0.0, 0.0]), head_core_sdf, t_max=30.0)[0]
+    _EAR[key] = (O - n * 0.35, b, v, n)
+    return _EAR[key]
+
+
+def ear_local(P, s):
+    O, b, v, n = ear_frame(s)
+    q = P - O
+    return np.column_stack([q @ b, q @ v, q @ n])
+
+
+def _ear_rim():
+    """Rim (helix) of the ear: a smooth C from the top front, round the top and back, down to the lobe."""
+    pts = []
+    for th in np.linspace(math.radians(148), math.radians(-112), 14):
+        f = (math.radians(148) - th) / math.radians(260)
+        pts.append((2.2 + 2.35 * math.cos(th), 0.25 + 3.95 * math.sin(th), 0.52 + 0.4 * f ** 2))
+    return pts
+
+
+EAR_RIM = _ear_rim()
+EAR_K = 1.08                                                          # overall ear size
+
+
+def ear_sdf(P, s):
+    """A stylised ear: a rolled rim curling from the top round to a soft lobe, a hollow bowl, a small inner fold
+    and a tragus bump at the front."""
+    L = ear_local(P, s) / EAR_K
+    plate = sd_ellipsoid(L, np.array([2.15, 0.15, 0.55]), np.array([2.7, 4.3, 0.95]))
+    rim = sd_chain(L, [np.array([u, v, 1.05]) for u, v, r in EAR_RIM], [r for u, v, r in EAR_RIM], 0.45)
+    d = smin(plate, rim, 0.6)
+    d = smin(d, sd_ellipsoid(L, np.array([1.7, -3.2, 0.7]), np.array([1.5, 1.2, 0.95])), 0.8)       # lobe
+    bowl = sd_ellipsoid(L, np.array([2.05, 0.2, 2.0]), np.array([1.75, 3.0, 1.35]))
+    d = smax(d, -bowl, 0.7)
+    fold = sd_chain(L, [np.array([2.9, 2.5, 0.95]), np.array([3.3, 0.8, 0.95]), np.array([2.9, -1.0, 0.9])], [0.3, 0.34, 0.28], 0.3)
+    d = smin(d, fold, 0.55)
+    d = smin(d, sd_ellipsoid(L, np.array([0.45, -0.7, 0.95]), np.array([0.6, 0.75, 0.55])), 0.35)   # tragus
+    return smax(d, -L[:, 2] - 0.8, 0.3) * EAR_K                         # nothing behind the root
+
+
+def head_base_sdf(P):
+    """Head with ears, without eye windows."""
+    d = head_core_sdf(P)
     for side, s in SIDES:
-        c = C + mirror(EAR["off"], s)
-        R = rot_axes(mirror([0.9, 0.42, 0], s), [0, 0, 1])
-        e = sd_ellipsoid(P, c, np.array(EAR["r"]), R)
-        e = smax(e, -sd_sphere(P, c + mirror([1.3, -0.2, 0.2], s), 2.3), 0.6)                   # bowl of the ear
-        d = smin(d, e, 1.2)
-    d = smin(d, sd_capsule(P, (0, 0.6, Z["neck"] - 1.5), (0, 0.8, C[2] - 8.0), 4.75), 2.5)       # neck
+        d = smin(d, ear_sdf(P, s), 0.9)
     return d
 
 

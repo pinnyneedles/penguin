@@ -119,11 +119,12 @@ def paint_head(a):
             # the inside wall of the eye opening: a bold dark line along the top, like an inked upper lid
             wall = (r < 1.12) & (depth < 0.9) & (y > -0.05)
             c[wall] = mix(c[wall], PAL["lash"], sstep(-0.05, 0.3, y[wall]))
-        # inside of the ears a shade darker
+        # the hollow of each ear a shade warmer and darker, fading out toward the rim
         for side, s in G.SIDES:
-            ec = G.HEAD_C + G.mirror(G.EAR["off"], s) + G.mirror([1.3, -0.2, 0.2], s)
-            dd = np.linalg.norm(Pb - ec, axis=1)
-            c = mix(c, PAL["skin_shadow"], 0.45 * (1 - sstep(1.4, 2.3, dd)))
+            L = G.ear_local(Pb, s) / G.EAR_K
+            inside = np.sqrt(((L[:, 0] - 2.05) / 1.75) ** 2 + ((L[:, 1] - 0.2) / 3.0) ** 2)
+            near = (L[:, 2] > -0.2) & (L[:, 2] < 1.6) & (np.abs(L[:, 0] - 2.0) < 4.0)
+            c[near] = mix(c[near], PAL["skin_shadow"], 0.55 * (1 - sstep(0.75, 1.0, inside[near])))
         col[body] = c
     m = piece == PIECES["lid_upper"]
     if m.any():
