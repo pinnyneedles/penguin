@@ -57,6 +57,13 @@ bad += check("upper arms hidden in the sleeves", arms, G.tunic_sdf, under_sleeve
 head = surface(G.head_base_sdf, G.HEAD_BOX)
 bad += check("neck hidden in the tunic and collar (below the collar)", head,
              lambda P: np.minimum(G.tunic_sdf(P), G.collar_sdf(P)), lambda P: P[:, 2] < G.Z["shoulder"] - 0.2, True, 0.05)
+# where the clothes open round the body, the body stays clear of the cloth's inner wall
+bad += check("pants clear of the shirt's cloth inside the skirt", pants, G.tunic_cloth_sdf,
+             lambda P: (P[:, 2] > G.HEM_Z - 0.5) & (P[:, 2] < G.SKIRT_TOP - 0.6), False, 0.1)
+bad += check("calves clear of the trouser cloth at the cuffs", legs, G.pants_cloth_sdf,
+             lambda P: G.pants_openings(P) < -0.6, False, 0.1)
+bad += check("arms clear of the sleeve cloth at the sleeve ends", arms, G.tunic_cloth_sdf,
+             lambda P: G.tunic_openings(P) < -0.6, False, 0.1)
 ears = lambda P: np.any([(G.ear_zone(P, s) < 1.0) & (G.ear_local(P, s)[:, 2] > 0.0) for _, s in G.SIDES], axis=0)
 for style in ("hair_tousled", "hair_spiky"):
     bad += check(f"ears clear of the {style.split('_')[1]} hair", head, G.PARTS[style][0], ears, False, 0.02)

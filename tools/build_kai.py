@@ -319,12 +319,13 @@ PV = np.array([v.co[:] for v in proxy.data.vertices])
 bm.free()
 
 
-def transfer(V):
-    """Weights at points V interpolated from the nearest proxy triangle."""
+def transfer(V, src=None):
+    """Weights at points V interpolated from the nearest triangle of the proxy (or of src = (bvh, verts, tris, W))."""
+    bvh, pv, tri, pw = src if src else (BVH, PV, TRI, PW)
     W = np.zeros((len(V), len(BONES)))
     for i, p in enumerate(V):
-        loc, nor, fi, dist = BVH.find_nearest(Vector(p))
-        a, b, c = PV[TRI[fi]]
+        loc, nor, fi, dist = bvh.find_nearest(Vector(p))
+        a, b, c = pv[tri[fi]]
         v0, v1, v2 = b - a, c - a, np.array(loc) - a
         d00, d01, d11 = v0 @ v0, v0 @ v1, v1 @ v1; d20, d21 = v2 @ v0, v2 @ v1
         den = d00 * d11 - d01 * d01
@@ -332,8 +333,16 @@ def transfer(V):
         else:
             wb = (d11 * d20 - d01 * d21) / den; wc = (d00 * d21 - d01 * d20) / den
             w = np.clip(np.array([1 - wb - wc, wb, wc]), 0, 1); w /= w.sum()
-        W[i] = w @ PW[TRI[fi]]
+        W[i] = w @ pw[tri[fi]]
     return W
+
+
+def mesh_source(ob, W):
+    """A weight source (for transfer) from a skinned part's own surface."""
+    bm = bmesh.new(); bm.from_mesh(ob.data); bmesh.ops.triangulate(bm, faces=bm.faces); bm.faces.ensure_lookup_table()
+    tri = np.array([[v.index for v in f.verts] for f in bm.faces]); bvh = BVHTree.FromBMesh(bm)
+    pv = np.array([v.co[:] for v in ob.data.vertices]); bm.free()
+    return bvh, pv, tri, W
 
 
 def chain_weights(P, pts, bones, radius):
@@ -408,6 +417,18 @@ def slot_weights(slot):
         Wb = W[body]; Wb[hi] = 0; Wb[hi, bidx["head"]] = 1.0; W[body] = Wb
         for p, o in zip(pieces[1:], offs[1:]):
             W[o:o + len(p.V)] = 0; W[o:o + len(p.V), bidx[p.bone]] = 1.0
+    if slot == "tunic":
+        # the shirt itself follows the spine and pelvis, not the thighs (bone heat lets them reach up to the waist)
+        tl, tr, pel = bidx[G.bn("thigh", "L")], bidx[G.bn("thigh", "R")], bidx["pelvis"]
+        W[:, pel] += W[:, tl] + W[:, tr]; W[:, tl] = 0; W[:, tr] = 0
+        # the skirt hands over to the thighs below the hips, so it lifts, swings back and steps out with them
+        t = np.clip((39.5 - P[:, 2]) / (39.5 - (G.HEM_Z + 1.0)), 0, 1)
+        f = t * t * (3 - 2 * t) * 0.95                                # none at the waist, nearly all at the hem
+        # the front and sides rest on the thighs as they lift or step out; the back mostly hangs from the pelvis,
+        # since lifting moves the thighs away from it (following fully would swing it into the seat)
+        f *= 0.3 + 0.7 * np.clip((6.0 - P[:, 1]) / 4.0, 0, 1)
+        left = np.clip(0.5 + P[:, 0] / 10.0, 0, 1)                    # left thigh on the left, both in the middle
+        W *= (1 - f)[:, None]; W[:, tl] += f * left; W[:, tr] += f * (1 - left)
     if slot == "tunic":                                               # the back of the sailor collar flaps
         zs = G.Z["shoulder"]
         flap = (P[:, 1] > 2.0) & (P[:, 2] < zs - 2.0) & (np.abs(G.collar_sdf(P)) < 0.35)
@@ -418,12 +439,13 @@ def slot_weights(slot):
         tail = (P[:, 2] < c[2] - 1.2) & (P[:, 1] < -6.0)
         w = np.clip((c[2] - 1.2 - P[tail, 2]) / 3.5, 0, 1) * 0.85
         W[tail] *= (1 - w)[:, None]; W[tail, bidx["neckerchief"]] += w
-    if slot == "sash":
+    if slot == "sash":                        # rides on the shirt under it, so it moves with the skirt
+        W = transfer(P, mesh_source(PARTS["tunic"], SLOT_W["tunic"]))
         for tail, (pts, wd) in zip("ab", G.sash_tail_points()):
             bones = [f"sash_{tail}_0{j + 1}" for j in range(3)]
             Wc, near = chain_weights(P, pts, bones, 2.6)
             near &= P[:, 2] < pts[0][2] + 0.4
-            k = np.clip((pts[0][2] + 0.4 - P[near, 2]) / 2.0, 0, 1)
+            k = np.clip((G.Z["hip"] - P[near, 2]) / 4.0, 0, 1) * 0.35       # a share for physics flutter, below the hip
             W[near] = W[near] * (1 - k)[:, None] + Wc[near] * k[:, None]
     return limit(W)
 
@@ -438,8 +460,9 @@ def skin(ob, W):
     ob.modifiers.new("Armature", "ARMATURE").object = rig
 
 
+SLOT_W = {}
 for slot, ob in PARTS.items():
-    W = slot_weights(slot)
+    W = SLOT_W[slot] = slot_weights(slot)
     skin(ob, W)
     log("skinned", slot, "bones used:", int((W.sum(0) > 0).sum()))
 bpy.data.objects.remove(proxy)

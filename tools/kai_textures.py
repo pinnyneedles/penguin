@@ -200,6 +200,9 @@ def paint_tunic(a):
     vee = cloth & (vx < 0) & (P[:, 1] < -2.0) & (P[:, 2] > G.Z["chest"] + 0.2)
     stripe = np.sin(P[:, 2] * math.pi / 0.55) > 0
     col[vee] = PAL["white"]; col[vee & stripe] = PAL["navy"]
+    # the inside of the cloth (seen from below, up the skirt or a sleeve) a shade darker
+    inner = cloth & (G.tunic_sdf(P) < -0.5 * G.CLOTH)
+    col[inner] = col[inner] * 0.62
     # sailor collar: navy with two white stripes along its outer edge
     cm = which == 1
     if cm.any():
@@ -220,6 +223,9 @@ def paint_pants(a):
         cuff = (np.linalg.norm(P - C, axis=1) < 8.0) & (along > -1.8)
         col[cuff] = PAL["pants_dark"]
         col[cuff & (np.abs(along + 0.3) < 0.18)] = PAL["pants"]
+    # the inside of the trouser legs, seen up from the cuffs, a shade darker
+    inner = G.pants_sdf(P) < -0.2
+    col[inner] = col[inner] * 0.62
     # a green patch with white stitches on Kai's right knee
     K = G.leg_points(-1)[1]
     q = P - (K + np.array([0, -4.6, 1.2]))

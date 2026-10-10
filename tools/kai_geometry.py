@@ -621,16 +621,23 @@ def vneck(P):
     return np.maximum(np.maximum(vx * 0.85, -(P[:, 1] + 2.0)), Z["chest"] + 0.2 - P[:, 2])
 
 
-def tunic_sdf(P):
+def _tunic(P, cut=True):
     d = torso_core(P)
     Q = P.copy(); Q[:, 1] = (Q[:, 1] - 0.4) / 0.84 + 0.4                 # flared skirt, elliptic in section
     d = smin(d, sd_round_cone(Q, (0, 0.4, Z["waist"]), (0, 0.4, HEM_Z + 1.0), 9.3, 12.6), 3.0)
     for side, s in SIDES:
         S, E, W, d2 = arm_points(s)
         d1 = nrm(E - S); end = S + d1 * 6.6
-        sl = smax(sd_round_cone(P, S - d1 * 1.2, end, 3.75, 3.55), sd_plane(P, end, d1), 0.25)
+        sl = sd_round_cone(P, S - d1 * 1.2, end, 3.75, 3.55)
+        if cut: sl = smax(sl, sd_plane(P, end, d1), 0.25)                 # sleeve end
         d = smin(d, sl, 1.8)
-    return smax(d, sd_plane(P, (0, 0, HEM_Z), (0, 0, -1)), 0.35)            # hem (the neck simply passes into it)
+    if cut: d = smax(d, sd_plane(P, (0, 0, HEM_Z), (0, 0, -1)), 0.35)      # hem (the neck simply passes into it)
+    return d
+
+
+def tunic_sdf(P):
+    """The shirt's outer shape (a solid; see tunic_cloth_sdf for the cloth itself)."""
+    return _tunic(P)
 
 
 def collar_region(P):
@@ -650,8 +657,33 @@ def collar_sdf(P):
     return smax(d, -sd_capsule(P, (0, 0.5, Z["neck"] - 3.0), (0, 0.5, Z["neck"] + 12.0), 4.3), 0.3)
 
 
+CLOTH = 0.35                                            # cloth thickness where a garment opens round the body
+SKIRT_TOP = 39.0                                        # the hollow inside the shirt's skirt reaches up to here
+
+
+def open_cloth(d, d_uncut, cavity, thick=CLOTH):
+    """Turn a solid garment (d) into cloth `thick` thick wherever cavity < 0, so it opens at its edges (hem, sleeve
+    end, trouser cuff) like real clothing, instead of being capped flat across where the body passes through.
+    The cloth's thickness is measured from the garment before its edges were cut (d_uncut), so the hollow runs
+    out through each edge."""
+    return smax(d, -np.maximum(d_uncut + thick, cavity), 0.12)
+
+
+def tunic_openings(P):
+    """Where the shirt is hollow: the skirt, up to SKIRT_TOP, and the last part of each sleeve."""
+    r = P[:, 2] - SKIRT_TOP
+    for side, s in SIDES:
+        S, E, W, d2 = arm_points(s); d1 = nrm(E - S)
+        r = np.minimum(r, np.maximum(2.0 - (P - S) @ d1, sd_capsule(P, S, S + d1 * 9.0, 4.6)))
+    return r
+
+
+def tunic_cloth_sdf(P):
+    return open_cloth(tunic_sdf(P), _tunic(P, cut=False), tunic_openings(P))
+
+
 def tunic_part_sdf(P):
-    return np.minimum(tunic_sdf(P), collar_sdf(P))
+    return np.minimum(tunic_cloth_sdf(P), collar_sdf(P))
 
 
 TUNIC_BOX = ((-26, 26), (-13, 13), (HEM_Z - 1.5, Z["neck"] + 6))
@@ -665,16 +697,36 @@ def cuff_point(s):
     return K + (A - K) * 0.4
 
 
-def pants_sdf(P):
+def _pants(P, cut=True):
     d = sd_ellipsoid(P, np.array([0, 0.6, Z["pelvis"] + 1.6]), np.array([9.4, 7.0, 7.2]))
     d = smax(d, sd_plane(P, (0, 0, Z["waist"] + 1.0), (0, 0, 1)), 0.4)      # top tucked under the tunic
     for side, s in SIDES:
         H, K, A, Bl, T = leg_points(s)
         C = cuff_point(s); ax = nrm(C - K)
-        leg = smax(sd_chain(P, [H + np.array([-0.5 * s, 0, 1.5]), K, C], [5.0, 5.15, 5.4], 0.8), sd_plane(P, C, ax), 0.3)
+        leg = sd_chain(P, [H + np.array([-0.5 * s, 0, 1.5]), K, C], [5.0, 5.15, 5.4], 0.8)
+        if cut: leg = smax(leg, sd_plane(P, C, ax), 0.3)
         d = smin(d, leg, 2.6)
-        d = smin(d, sd_torus(P, C - ax * 0.3, ax, 5.1, 1.2), 0.4)
+        d = smin(d, sd_torus(P, C - ax * 0.3, ax, 5.1, 1.2), 0.4)          # rolled-up cuff
     return d
+
+
+def pants_sdf(P):
+    """The trousers' outer shape (a solid; see pants_cloth_sdf for the cloth itself)."""
+    return _pants(P)
+
+
+def pants_openings(P):
+    """Where the trousers are hollow: the last 1.6 cm of each leg above the rolled cuff."""
+    r = None
+    for side, s in SIDES:
+        H, K, A, Bl, T = leg_points(s); C = cuff_point(s); ax = nrm(C - K)
+        q = np.maximum(-1.6 - (P - C) @ ax, sd_capsule(P, C - ax * 4.0, C + ax * 3.0, 5.0))
+        r = q if r is None else np.minimum(r, q)
+    return r
+
+
+def pants_cloth_sdf(P):
+    return open_cloth(pants_sdf(P), _pants(P, cut=False), pants_openings(P), 0.4)
 
 
 PANTS_BOX = ((-17, 17), (-12, 12), (8.0, Z["waist"] + 3))
@@ -724,6 +776,8 @@ def leg_skin_sdf(P, s):
     """Calf and ankle: from inside the pants leg down to under the sandal's ankle strap."""
     H, K, A, Bl, T = leg_points(s); C = cuff_point(s)
     calf = sd_chain(P, [K + (C - K) * 0.3, C + (A - C) * 0.4, A + np.array([0, 0, -0.6])], [3.9, 3.45, ANKLE_R - 0.05], 0.8)
+    ax = nrm(C - K)
+    calf = smax(calf, sd_plane(P, C - ax * 2.4, -ax), 0.3)              # ends inside the trouser leg, clear of the knee
     return smax(calf, (ankle_band(s)[0] + 0.25) - P[:, 2], 0.1)
 
 
@@ -1005,7 +1059,7 @@ def skeleton():
     for side, s in SIDES:
         add(bn("hair_side", side), C + [14.5 * s, -6.0, 3.0], C + [15.0 * s, -7.0, -6.5], FWD, "head")
     for tail, (pts, w) in zip("ab", sash_tail_points()):
-        parent = "pelvis"
+        parent = bn("thigh", "L")                 # the tails hang over the left thigh and ride on it
         for j in range(3):
             add(f"sash_{tail}_0{j + 1}", pts[j], pts[j + 1], FWD, parent); parent = f"sash_{tail}_0{j + 1}"
     zs = Z["shoulder"]
@@ -1047,7 +1101,7 @@ def polygonize(sdf, box, h, chunk=24):
 
 PARTS = {   # slot: (sdf, box)
     "head": (head_sdf, HEAD_BOX), "hair_tousled": (hair_tousled_sdf, HAIR_BOX), "hair_spiky": (hair_spiky_sdf, HAIR_BOX),
-    "arms": (arms_sdf, None), "tunic": (tunic_part_sdf, TUNIC_BOX), "pants": (pants_sdf, PANTS_BOX),
+    "arms": (arms_sdf, None), "tunic": (tunic_part_sdf, TUNIC_BOX), "pants": (pants_cloth_sdf, PANTS_BOX),
     "legs": (legs_sdf, LEGS_BOX), "sandals": (sandal_sdf, SANDAL_BOX),
     "sash": (sash_sdf, SASH_BOX), "neckerchief": (neckerchief_sdf, KERCHIEF_BOX),
 }
