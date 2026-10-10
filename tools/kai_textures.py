@@ -21,11 +21,11 @@ PAL = dict(
     mouth=rgb(118, 34, 30), tongue=rgb(228, 108, 100),
     white=rgb(252, 252, 247), white_shade=rgb(214, 224, 238), iris=rgb(36, 86, 150), iris_hi=rgb(92, 152, 212),
     iris_dark=rgb(14, 28, 62), pupil=rgb(12, 12, 20),
-    tunic=rgb(247, 241, 228), navy=rgb(38, 72, 142), navy_dark=rgb(28, 52, 108),
+    tunic=rgb(212, 46, 40), navy=rgb(36, 60, 128), navy_dark=rgb(28, 52, 108), nail=rgb(255, 226, 206),
     pants=rgb(218, 182, 124), pants_dark=rgb(188, 150, 96), patch=rgb(104, 140, 92), stitch=rgb(250, 238, 210),
     sole=rgb(96, 58, 32), strap=rgb(150, 92, 48), strap_hi=rgb(184, 124, 70),
     wrap=rgb(240, 228, 200), wrap_line=rgb(200, 180, 140),
-    sash=rgb(246, 184, 40), sash_edge=rgb(226, 120, 30), kerchief=rgb(222, 62, 46), kerchief_dark=rgb(170, 40, 34),
+    sash=rgb(246, 184, 40), sash_edge=rgb(226, 120, 30), kerchief=rgb(252, 204, 64), kerchief_dark=rgb(226, 150, 34),
 )
 
 PIECES = dict(body=0, sclera=1, iris=2, lid_upper=3, lid_lower=4, brow=5, mouth=6)
@@ -227,11 +227,22 @@ def paint_pants(a):
 
 
 def paint_sandals(a):
+    """Feet (skin, with toenails) and sandals: dark sole with a light insole edge, leather straps with stitching."""
     P, Nn, piece, loc = unpack(a)
     col = np.tile(PAL["strap"], (len(P), 1))
-    sole = P[:, 2] < 1.55
+    foot = np.minimum(G.foot_skin_sdf(P, 1.0), G.foot_skin_sdf(P, -1.0))
+    sole = P[:, 2] < G.SOLE_TOP + 0.02
+    skin = (np.abs(foot) < 0.12) & ~sole
+    col[skin] = PAL["skin"]
+    for s in (1.0, -1.0):
+        for c, r in G.toe_points(s):
+            nail = np.linalg.norm((P - (c + np.array([0, -r * 0.55, r * 0.55]))) / np.array([r * 0.55, r * 0.5, r * 0.6]), axis=1) < 1.0
+            col[skin & nail & (Nn[:, 2] > 0.2)] = PAL["nail"]
     col[sole] = PAL["sole"]
-    col[sole & (P[:, 2] > 1.25)] = PAL["strap_hi"]
+    col[sole & (P[:, 2] > G.SOLE_TOP - 0.3)] = PAL["strap_hi"]
+    strap = ~skin & ~sole
+    edge = strap & (np.abs(foot - 0.25) > 0.18)
+    col[strap & (np.sin((P[:, 0] + P[:, 1] * 1.3 + P[:, 2]) * 7.0) > 0.85) & ~edge] = PAL["strap_hi"]
     return col
 
 

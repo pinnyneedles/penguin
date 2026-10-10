@@ -179,6 +179,10 @@ if "closeup" in ONLY:
              shot(os.path.join(FRAMES, "close_3q.png"), (150, -380, C[2] + 4), C + np.array([0, 0, -4.0]), 50, 520, 520),
              shot(os.path.join(FRAMES, "close_side.png"), (400, 0, C[2] - 2), C + np.array([0, 2.0, -4.0]), 50, 520, 520)]
     sheet(paths, ["Face, front", "Face, three-quarter", "Face, side"], 3, os.path.join(D, "Preview_Face.png"))
+    feet = [shot(os.path.join(FRAMES, "feet_3q.png"), (90, -160, 40), (0, -5, 4), 34, 520, 360),
+            shot(os.path.join(FRAMES, "feet_side.png"), (200, -20, 12), (7, -4, 4), 26, 520, 360),
+            shot(os.path.join(FRAMES, "feet_back.png"), (-60, 160, 45), (0, -2, 4), 34, 520, 360)]
+    sheet(feet, ["Feet, three-quarter", "Left foot, side", "Feet, from behind"], 3, os.path.join(D, "Preview_Feet.png"))
 
 if "faces" in ONLY:
     reset_pose(); show(DEFAULT)

@@ -37,8 +37,8 @@ SLOTS = {
     "arms": ("SK_Kai_Arms", 0.15, 9000, 1024, True),
     "tunic": ("SK_Kai_Tunic", 0.22, 10000, 2048, True),
     "pants": ("SK_Kai_Pants", 0.24, 6000, 1024, True),
-    "legs": ("SK_Kai_Legs", 0.18, 5000, 1024, True),
-    "sandals": ("SK_Kai_Sandals", 0.16, 5000, 1024, True),
+    "legs": ("SK_Kai_Legs", 0.18, 3000, 1024, True),
+    "sandals": ("SK_Kai_Sandals", 0.12, 9000, 1024, True),
     "sash": ("SK_Kai_Sash", 0.22, 3000, 1024, True),
     "neckerchief": ("SK_Kai_Neckerchief", 0.18, 1600, 512, True),
 }
@@ -266,6 +266,7 @@ def proxy_sdf(P):
     d = np.minimum(d, G.arms_sdf(P))
     d = np.minimum(d, G.pants_sdf(P))
     d = np.minimum(d, G.legs_sdf(P))
+    d = np.minimum(d, np.minimum(G.foot_skin_sdf(P, 1.0), G.foot_skin_sdf(P, -1.0)))
     return d
 
 

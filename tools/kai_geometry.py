@@ -547,55 +547,88 @@ def pants_sdf(P):
 PANTS_BOX = ((-17, 17), (-12, 12), (8.0, Z["waist"] + 3))
 
 
-def foot_skin_sdf(P, s):
+SOLE_TOP = 1.5                                          # the foot stands on the sole at this height
+
+
+def ankle_band(s):
+    """Height range (z0, z1) of the sandal's ankle strap, which hides where the calf meets the foot."""
+    A = leg_points(s)[2]
+    return A[2] - 1.7, A[2] + 0.5
+
+
+def toe_points(s):
+    """Five toes along the front of the foot, big toe on the inside: (centre, radius)."""
     H, K, A, Bl, T = leg_points(s)
-    heel = np.array([A[0], A[1] + 1.3, 3.3])
-    ball = np.array([Bl[0], Bl[1] + 0.8, 3.1])
-    d = sd_round_cone(P, A + np.array([0, 0, 2.5]), heel, ANKLE_R - 0.1, 2.9)
-    d = smin(d, sd_round_cone(P, heel, ball, 2.9, 3.15), 1.0)
-    d = smin(d, sd_ellipsoid(P, np.array([Bl[0] + 0.25 * s, Bl[1] - 2.2, 2.75]), np.array([3.85, 3.4, 2.15])), 1.4)
-    return np.maximum(d, -(P[:, 2] - 1.0))
+    out = []
+    for dx, dy, r in ((-2.05, -4.45, 1.05), (-0.7, -4.4, 0.8), (0.45, -4.15, 0.74), (1.5, -3.75, 0.67), (2.4, -3.2, 0.6)):
+        out.append((np.array([Bl[0] + dx * s, Bl[1] + dy, SOLE_TOP + r * 0.92]), r))
+    return out
+
+
+def foot_skin_sdf(P, s):
+    """A chunky toon foot: tall at the ankle, tapering over the instep to a low, wide front with sculpted toes and a
+    flat sole; it starts just under the top of the ankle strap."""
+    H, K, A, Bl, T = leg_points(s)
+    Q = P.copy(); Q[:, 0] = A[0] + (P[:, 0] - A[0]) / 1.3                 # feet are wider than they are tall
+    heel = np.array([A[0], A[1] + 1.5, SOLE_TOP + 1.9])
+    inst = np.array([A[0] + 0.1 * s, A[1] - 4.2, SOLE_TOP + 2.1])
+    ball = np.array([Bl[0] + 0.1 * s, Bl[1] + 0.6, SOLE_TOP + 1.45])
+    d = sd_round_cone(P, A + np.array([0, 0, 1.0]), A + np.array([0, -0.4, -1.4]), ANKLE_R - 0.08, 2.3)
+    d = smin(d, sd_sphere(Q, heel, 1.95), 2.0)
+    d = smin(d, sd_round_cone(Q, A + np.array([0, -0.6, -1.0]), inst, 2.1, 2.05), 1.2)
+    d = smin(d, sd_round_cone(Q, inst, ball, 2.05, 1.55), 1.0)
+    d = smin(d, sd_ellipsoid(P, np.array([Bl[0] + 0.2 * s, Bl[1] - 1.8, SOLE_TOP + 1.15]), np.array([3.55, 2.7, 1.25])), 1.0)
+    toes = None
+    for c, r in toe_points(s):
+        t = sd_ellipsoid(P, c, np.array([r, r * 1.25, r * 0.92]))
+        toes = t if toes is None else smin(toes, t, 0.25)
+    d = smin(d, toes, 0.55)
+    d = smax(d, SOLE_TOP - 0.12 - P[:, 2], 0.25)                        # flat underneath, resting on the sole
+    return smax(d, P[:, 2] - (ankle_band(s)[1] - 0.25), 0.1)          # ends under the ankle strap
 
 
 def leg_skin_sdf(P, s):
-    """Calf, ankle and bare foot as one smooth piece, starting inside the pants leg."""
+    """Calf and ankle: from inside the pants leg down to under the sandal's ankle strap."""
     H, K, A, Bl, T = leg_points(s); C = cuff_point(s)
-    calf = sd_chain(P, [K + (C - K) * 0.3, C + (A - C) * 0.4, A + np.array([0, 0, 0.5])], [3.9, 3.45, ANKLE_R - 0.05], 0.8)
-    return smin(calf, foot_skin_sdf(P, s), 1.0)
+    calf = sd_chain(P, [K + (C - K) * 0.3, C + (A - C) * 0.4, A + np.array([0, 0, -0.6])], [3.9, 3.45, ANKLE_R - 0.05], 0.8)
+    return smax(calf, (ankle_band(s)[0] + 0.25) - P[:, 2], 0.1)
 
 
 def legs_sdf(P):
     return np.minimum(leg_skin_sdf(P, 1.0), leg_skin_sdf(P, -1.0))
 
 
-LEGS_BOX = ((-15, 15), (-20, 11), (-1, Z["knee"] + 2))
+LEGS_BOX = ((-15, 15), (-12, 11), (Z["ankle"] - 3, Z["knee"] + 2))
 
 
 def sandal_sdf(P):
-    """Soles and leather straps that sit on the feet."""
+    """Feet and sandals as one fused piece (like boots, footwear owns the feet), so the straps can never cut into
+    the feet: sole, toe strap, instep strap, a T-strap up to the ankle strap, and the ankle strap around the calf."""
     d = None
     for side, s in SIDES:
         H, K, A, Bl, T = leg_points(s)
         foot = foot_skin_sdf(P, s)
         xy = P.copy(); xy[:, 2] = 0
-        o = smin(sd_ellipsoid(xy, np.array([A[0], A[1] + 1.1, 0]), np.array([3.7, 4.3, 1])),
-                 sd_ellipsoid(xy, np.array([Bl[0] + 0.3 * s, Bl[1] - 1.6, 0]), np.array([4.7, 5.3, 1])), 4.0) * 3.0
-        sole = smax(o, np.abs(P[:, 2] - 0.75) - 0.75, 0.5)
-        layer = shell(foot, 0.3, 0.55)
-        y_toe = Bl[1] - 0.6; y_inst = (A[1] + Bl[1]) * 0.5 - 0.5
-        toe = np.abs(P[:, 1] - y_toe) - 0.85
-        inst = np.abs(P[:, 1] - y_inst) - 0.85
-        tee = np.maximum(np.abs(P[:, 0] - (A[0] + Bl[0]) * 0.5 - 0.15 * s) - 0.75, 3.6 - P[:, 2])
-        tee = np.maximum(tee, np.maximum(P[:, 1] - A[1] + 0.8, y_inst - P[:, 1]))
-        straps = smax(smax(layer, np.minimum.reduce([toe, inst, tee]), 0.15), 1.2 - P[:, 2], 0.2)
-        ank = smax(shell(sd_capsule(P, A + np.array([0, 0, -2.0]), A + np.array([0, 0, 2.0]), ANKLE_R), 0.42, 0.6),
-                   np.abs(P[:, 2] - (A[2] - 0.6)) - 1.05, 0.15)
-        part = smin(smin(sole, straps, 0.3), ank, 0.2)
+        o = smin(sd_ellipsoid(xy, np.array([A[0], A[1] + 1.1, 0]), np.array([3.6, 4.3, 1])),
+                 sd_ellipsoid(xy, np.array([Bl[0] + 0.15 * s, Bl[1] - 2.2, 0]), np.array([4.6, 5.0, 1])), 4.0) * 3.0
+        sole = smax(o, np.abs(P[:, 2] - SOLE_TOP * 0.5) - SOLE_TOP * 0.5, 0.45)
+        layer = shell(foot, 0.25, 0.5)
+        y_toe = Bl[1] - 0.9; y_inst = (A[1] + Bl[1]) * 0.5 - 0.3
+        toe = np.abs(P[:, 1] - y_toe) - 0.8
+        inst = np.abs(P[:, 1] - y_inst) - 0.8
+        tee = np.maximum(np.abs(P[:, 0] - (A[0] + Bl[0]) * 0.5 - 0.15 * s) - 0.7, SOLE_TOP + 2.0 - P[:, 2])
+        tee = np.maximum(tee, np.maximum(P[:, 1] - A[1] + 0.6, y_inst - P[:, 1]))
+        straps = smax(smax(layer, np.minimum.reduce([toe, inst, tee]), 0.12), SOLE_TOP - 0.2 - P[:, 2], 0.2)
+        z0, z1 = ankle_band(s)
+        skin = smin(leg_skin_sdf(P, s), foot, 0.6)
+        around = np.hypot(P[:, 0] - A[0], P[:, 1] - A[1]) - (ANKLE_R + 1.0)    # only around the ankle itself
+        ank = smax(shell(skin, 0.42, 0.5), np.maximum.reduce([z0 - P[:, 2], P[:, 2] - z1, around]), 0.12)
+        part = smin(smin(smin(sole, foot, 0.15), straps, 0.2), ank, 0.2)
         d = part if d is None else np.minimum(d, part)
     return d
 
 
-SANDAL_BOX = ((-15, 15), (-20, 11), (-1, 10.5))
+SANDAL_BOX = ((-15, 15), (-18, 11), (-1, Z["ankle"] + 3.0))
 
 
 def arm_skin_sdf(P, s):
