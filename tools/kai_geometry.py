@@ -129,8 +129,13 @@ def stretched(P, a, normal, k):
     return P + np.outer((P - a) @ n, n) * (k - 1.0)
 
 
-def flat_chain(P, pts, widths, normal, k=2.6, blend=0.3):
-    return sd_chain(stretched(P, pts[0], normal, k), pts, widths, blend) / k ** 0.5
+def flat_chain(P, pts, widths, normal, k=2.6, blend=0.3, legacy=False):
+    """Round cones through pts, flattened by k along normal into a ribbon. (legacy: the original variant that
+    flattens only the evaluation points, which also pulls the ribbon toward the plane through pts[0].)"""
+    Q = stretched(P, pts[0], normal, k)
+    if not legacy:
+        pts = [stretched(np.atleast_2d(p), pts[0], normal, k)[0] for p in pts]
+    return sd_chain(Q, pts, widths, blend) / k ** 0.5
 
 
 def smooth01(x):
@@ -490,14 +495,13 @@ def vneck(P):
 def tunic_sdf(P):
     d = torso_core(P)
     Q = P.copy(); Q[:, 1] = (Q[:, 1] - 0.4) / 0.84 + 0.4                 # flared skirt, elliptic in section
-    d = smin(d, sd_round_cone(Q, (0, 0.4, Z["waist"]), (0, 0.4, HEM_Z + 1.0), 9.2, 11.6), 3.0)
+    d = smin(d, sd_round_cone(Q, (0, 0.4, Z["waist"]), (0, 0.4, HEM_Z + 1.0), 9.3, 12.6), 3.0)
     for side, s in SIDES:
         S, E, W, d2 = arm_points(s)
         d1 = nrm(E - S); end = S + d1 * 6.6
         sl = smax(sd_round_cone(P, S - d1 * 1.2, end, 3.75, 3.55), sd_plane(P, end, d1), 0.25)
         d = smin(d, sl, 1.8)
-    d = smax(d, sd_plane(P, (0, 0, HEM_Z), (0, 0, -1)), 0.35)               # hem
-    return smax(d, -sd_capsule(P, (0, 0.5, Z["neck"] - 3.0), (0, 0.5, Z["neck"] + 12.0), 4.4), 0.4)   # neck opening
+    return smax(d, sd_plane(P, (0, 0, HEM_Z), (0, 0, -1)), 0.35)            # hem (the neck simply passes into it)
 
 
 def collar_region(P):
@@ -533,13 +537,13 @@ def cuff_point(s):
 
 
 def pants_sdf(P):
-    d = sd_ellipsoid(P, np.array([0, 0.6, Z["pelvis"] + 1.6]), np.array([10.4, 7.6, 7.2]))
+    d = sd_ellipsoid(P, np.array([0, 0.6, Z["pelvis"] + 1.6]), np.array([9.4, 7.0, 7.2]))
     d = smax(d, sd_plane(P, (0, 0, Z["waist"] + 1.0), (0, 0, 1)), 0.4)      # top tucked under the tunic
     for side, s in SIDES:
         H, K, A, Bl, T = leg_points(s)
         C = cuff_point(s); ax = nrm(C - K)
-        leg = smax(sd_chain(P, [H + np.array([0, 0, 1.5]), K, C], [6.0, 5.2, 5.4], 0.8), sd_plane(P, C, ax), 0.3)
-        d = smin(d, leg, 3.2)
+        leg = smax(sd_chain(P, [H + np.array([-0.5 * s, 0, 1.5]), K, C], [5.0, 5.15, 5.4], 0.8), sd_plane(P, C, ax), 0.3)
+        d = smin(d, leg, 2.6)
         d = smin(d, sd_torus(P, C - ax * 0.3, ax, 5.1, 1.2), 0.4)
     return d
 
@@ -666,24 +670,47 @@ def _arms_box():
 # ---------------------------------------------------------------------------
 # Accessories
 # ---------------------------------------------------------------------------
+_SASH = {}
+
+
+def _on_tunic(p, out):
+    """Point on the tunic surface in the horizontal direction of p from the body axis, pushed out by out (cm)."""
+    d = np.array([p[0], p[1] - 0.4, 0.0]); d /= np.linalg.norm(d)
+    origin = np.array([0.0, 0.4, p[2]]) + d * 30.0
+    hit = ray_hits(origin, -d, tunic_sdf, t_max=30.0, steps=600)[0]
+    return hit + sdf_normals(hit, tunic_sdf)[0] * out
+
+
+def sash_knot():
+    if "knot" not in _SASH: _SASH["knot"] = _on_tunic(SASH_KNOT, 1.35)
+    return _SASH["knot"]
+
+
 def sash_tail_points():
+    """Two ribbon tails hanging from the knot, following the flare of the tunic's skirt."""
+    if "tails" in _SASH: return _SASH["tails"]
     out = []
-    for (dx, dy), w in (((0.6, -0.4), (1.5, 1.6, 1.9, 2.1)), ((1.8, 0.8), (1.4, 1.5, 1.7, 1.8))):
-        p = SASH_KNOT + np.array([0.2, -0.6, -0.6]); pts = [p]
-        for j in range(3):
-            p = p + np.array([dx * 0.35, dy * 0.3, -3.3]); pts.append(p)
+    k = sash_knot()
+    for (ang, spread), w in (((-14.0, 0.6), (1.5, 1.6, 1.85, 2.05)), ((10.0, 1.4), (1.4, 1.5, 1.7, 1.8))):
+        pts = [k + np.array([0, 0, -0.9])]
+        for j in range(1, 4):
+            z = k[2] - 0.9 - 3.4 * j
+            a = math.atan2(k[0], -(k[1] - 0.4)) + math.radians(ang) * j / 3.0
+            p = np.array([math.sin(a), -math.cos(a) + 0.4 / 30, 0.0]) * 10.0
+            pts.append(_on_tunic(np.array([p[0], p[1], z]), 0.95 + 0.15 * j + spread * 0.1 * j))
         out.append((pts, w))
+    _SASH["tails"] = out
     return out
 
 
 def sash_sdf(P):
-    waist = sd_ellipsoid(P, np.array([0, 0.4, Z["waist"] - 1.0]), np.array([9.7, 7.4, 6.4]))
-    band = smax(shell(waist, 0.95, 1.5), np.abs(P[:, 2] - (Z["waist"] - 1.2)) - 2.3, 0.6)
-    knot = sd_ellipsoid(P, SASH_KNOT + np.array([0.3, -0.5, 0.2]), np.array([2.1, 1.5, 1.8]), rot_axes([0.6, -0.8, 0], [0, 0, 1]))
+    band = smax(shell(tunic_sdf(P), 0.78, 1.3), np.abs(P[:, 2] - (Z["waist"] - 1.2)) - 2.3, 0.45)   # hugs the tunic
+    k = sash_knot(); out = nrm(np.array([k[0], k[1] - 0.4, 0.0]))
+    knot = sd_ellipsoid(P, k, np.array([2.0, 1.4, 1.75]), rot_axes(np.cross(UP, out), UP))
     d = smin(band, knot, 0.8)
-    out = nrm(np.array([0.6, -0.8, 0.0]))
-    for pts, w in sash_tail_points():
-        d = smin(d, flat_chain(P, pts, w, out, 2.8), 0.6)
+    for pts, w in sash_tail_points():                               # each ribbon lies flat on the skirt beneath it
+        nt = nrm(sdf_normals(np.array(pts[1:]), tunic_sdf).mean(0))
+        d = smin(d, flat_chain(P, pts, w, nt, 2.8), 0.6)
     return d
 
 
@@ -747,7 +774,7 @@ def clump(P, root, tip, width, lift=1.5, bulge=2.0, k=1.5, n=7):
     normal = nrm(pts[n // 2] - HEAD_C)
     widths = [width * (1 - t) ** 0.65 * (0.75 + 0.25 * math.sin(math.pi * min(1.0, t * 1.6))) + 0.07
               for t in np.linspace(0, 1, n)]
-    return flat_chain(P, pts, widths, normal, k, 0.5)
+    return flat_chain(P, pts, widths, normal, k, 0.5, legacy=True)
 
 
 CROWN = (165, 76)
