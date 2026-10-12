@@ -21,7 +21,7 @@ PAL = dict(
     star=rgb(252, 204, 64), brass=rgb(214, 170, 72), brass_dark=rgb(170, 128, 50),
     lamp_port=rgb(226, 52, 48), lamp_star=rgb(60, 196, 96),
 )
-PIECES = ["outer", "inner", "rim", "transom", "deck", "bulkhead", "floor", "seats", "rail", "pad", "clamp", "bow"]
+PIECES = ["outer", "inner", "rim", "transom", "deck", "bulkhead", "floor", "seats", "rail", "pad", "clamp", "bow", "console"]
 PID = {n: i for i, n in enumerate(PIECES)}
 
 
@@ -99,13 +99,54 @@ def paint_hull(a):
     c[lamp & (Q[:, 1] >= 0)] = PAL["lamp_port"]
     c[lamp & (Q[:, 1] < 0)] = PAL["lamp_star"]
     col[m] = c
+    m = piece == PID["console"]
+    col[m] = _console(P[m], Nn[m])
+    return col
+
+
+def _console(P, Nn):
+    """Honey wood box with plank lines, a navy trim round the top, a cream dash with a round gauge, a grey steering
+    column and a throttle lever with a red knob."""
+    c = B.CONSOLE
+    col = mix(np.tile(PAL["wood"], (len(P), 1)), PAL["wood_line"], _lines(P[:, 2] - B.FLOOR_Z, 7.5, 0.3))
+    slope = (c["top_front"] - c["top_back"]) / (c["x1"] - c["x0"])
+    ztop = c["top_back"] + slope * (P[:, 0] - c["x0"])
+    col[P[:, 2] > ztop - 3.2] = PAL["navy"]                                  # trim band
+    col[(P[:, 2] > ztop - 0.8) & (Nn[:, 2] > 0.6)] = PAL["cream"]             # dash top
+    q = P - B.WHEEL_C
+    along = q @ B.WHEEL_FWD
+    radial = np.linalg.norm(q - np.outer(along, B.WHEEL_FWD), axis=1)
+    col[(radial < 2.3) & (along > -1.5) & (P[:, 0] < c["x0"] + 0.5)] = PAL["clamp"]   # steering column
+    g = np.hypot(P[:, 1] - 5.4, P[:, 2] - B.GAUGE_Z)                          # gauge
+    face = (g < 2.3) & (P[:, 0] < c["x0"] - 0.4)
+    col[face & (g >= 1.7)] = PAL["navy"]
+    col[face & (g < 1.7)] = PAL["cream"]
+    needle = face & (g < 1.5) & (np.abs((P[:, 1] - 5.4) * 0.8 + (P[:, 2] - B.GAUGE_Z) * 0.6) < 0.22) & (P[:, 2] > B.GAUGE_Z - 0.4)
+    col[needle] = PAL["red"]
+    lever = (P[:, 1] < -c["half_w"] - 0.2) | ((P[:, 2] > c["top_front"] + 1.0) & (P[:, 1] < 0))
+    col[lever] = PAL["metal"]
+    col[np.linalg.norm(P - B.THROTTLE_KNOB, axis=1) < 2.0] = PAL["cowl"]
+    return col
+
+
+def paint_wheel(a):
+    """The steering wheel, painted in its own frame: red rim, cream spokes, navy hub with a yellow star cap."""
+    P, Nn, piece, loc = unpack(a)
+    part = B.wheel_part(P)
+    col = np.array([PAL["cowl"], PAL["band"], PAL["navy"], PAL["star"]])[part]
+    ang = np.arctan2(P[:, 2], P[:, 1]); r = np.hypot(P[:, 1], P[:, 2])
+    rim = part == 0
+    col[rim] = mix(col[rim], PAL["red_line"], _lines(ang[rim] * B.WHEEL_R, 2.2, 0.25) * (P[rim, 0] > 0))
+    k = 0.5 + 0.5 * np.cos(5 * (ang - np.pi / 2))
+    star = (part == 3) & (r < 0.55 + 0.75 * k ** 3)
+    col[(part == 3) & ~star] = PAL["navy"]
     return col
 
 
 def paint_motor(a):
     P, Nn, piece, loc = unpack(a)
     part = B.motor_part(P)
-    col = np.array([PAL["cowl"], PAL["band"], PAL["metal"], PAL["grip"], PAL["clamp"]])[part]
+    col = np.array([PAL["cowl"], PAL["band"], PAL["metal"]])[part]
     # a yellow star on each side of the cowl
     for s in (1, -1):
         c = np.array([B.MOTOR_PIVOT[0] - 7.5, 11.0 * s, B.MOTOR_PIVOT[2] + 16.0])
@@ -115,9 +156,6 @@ def paint_motor(a):
         k = 0.5 + 0.5 * np.cos(5 * (ang - np.pi / 2))
         star = r < 1.9 + 2.9 * k ** 3
         col[on_side & star] = PAL["star"]
-    # grip ribs
-    g = part == 3
-    col[g] = mix(col[g], rgb(70, 62, 58), _lines(P[g, 0] - B.TILLER_GRIP[0], 1.6, 0.18))
     return col
 
 

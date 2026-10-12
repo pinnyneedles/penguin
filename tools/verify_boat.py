@@ -52,6 +52,7 @@ EXPECT = {
     "SM_Boat_Hull": dict(origin=np.zeros(3), sockets={n: v[0] for n, v in B.sockets().items()}, closed=False),
     "SM_Boat_Motor": dict(origin=B.MOTOR_PIVOT, sockets={n: v[0] for n, v in B.motor_sockets().items()}, closed=True),
     "SM_Boat_Propeller": dict(origin=B.PROP_C, sockets={}, closed=True),
+    "SM_Boat_Wheel": dict(origin=B.WHEEL_C, sockets={}, closed=True),
 }
 for name, exp in EXPECT.items():
     path = os.path.join(D, name + ".fbx")
@@ -82,6 +83,10 @@ for name, exp in EXPECT.items():
         c = (V[T].mean(1) * area[:, None]).sum(0) / area.sum()
         r["centroid_cm"] = np.round(c, 3).tolist()
         check(np.abs(c[1:]).max() < 0.3, f"{name}: hub not on the X axis through the origin (centroid {np.round(c, 2)})")
+    if name == "SM_Boat_Wheel":                              # the rim runs round the local X axis through the origin
+        rad = np.hypot(V[:, 1], V[:, 2])
+        check(abs(rad.max() - (B.WHEEL_R + B.WHEEL_RIM)) < 0.3 and np.abs(V[:, 0]).max() < 3.5,
+              f"{name}: rim not round the X axis through the origin")
     # material and texture
     mats = [m for m in me.materials if m]
     r["materials"] = [m.name for m in mats]

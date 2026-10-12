@@ -9,7 +9,7 @@ checks renders back faces in red (should be none) and the collision pieces, for 
 import math, os, sys
 import bpy, bmesh
 import numpy as np
-from mathutils import Vector, Euler
+from mathutils import Matrix, Vector, Euler
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +26,9 @@ sc = bpy.context.scene
 sc.render.engine = "CYCLES"; sc.cycles.samples = 12; sc.cycles.use_denoising = False
 sc.view_settings.view_transform = "Standard"
 sc.cycles.max_bounces = 0; sc.cycles.transparent_max_bounces = 16
-MESHES = [bpy.data.objects[n] for n in ("SM_Boat_Hull", "SM_Boat_Motor", "SM_Boat_Propeller")]
-HULL, MOTOR, PROP = MESHES
+MESHES = [bpy.data.objects[n] for n in ("SM_Boat_Hull", "SM_Boat_Motor", "SM_Boat_Propeller", "SM_Boat_Wheel")]
+HULL, MOTOR, PROP, WHEEL = MESHES
+WHEEL_REST = WHEEL.matrix_world.copy()
 for o in bpy.data.objects:
     if o.name.startswith(("UCX_", "SOCKET_")): o.hide_render = True
 
@@ -123,8 +124,11 @@ def sheet(paths, labels, cols, out, title=None):
     return out
 
 
-def steer(deg):
-    MOTOR.rotation_euler = (0, 0, math.radians(deg)); bpy.context.view_layer.update()
+def steer(amount):
+    """amount -1 (full left) .. 1 (full right): the wheel turns, the outboard swings."""
+    MOTOR.rotation_euler = (0, 0, math.radians(B.STEER_MAX * amount))
+    WHEEL.matrix_world = WHEEL_REST @ Matrix.Rotation(math.radians(B.WHEEL_MAX * amount), 4, "X")
+    bpy.context.view_layer.update()
 
 
 C = Vector((10, 0, 28))
@@ -147,12 +151,12 @@ if "motor" in ONLY:
     sheet(paths, ["Outboard, port", "Outboard, from behind", "Propeller"], 3, os.path.join(D, "Preview_Boat_Motor.png"))
 if "steer" in ONLY:
     paths = []
-    for k, deg in enumerate((-B.STEER_MAX, 0, B.STEER_MAX)):
-        steer(deg)
-        paths.append(shot("steer_%d" % k, (-90, 0, 330), (-90, 0, 30), 120, w=420, h=420))
+    for k, amount in enumerate((-1, 0, 1)):
+        steer(amount)
+        paths.append(shot("steer_%d" % k, (-180, 0, 330), (-85, 0, 30), 130, w=420, h=420))
     steer(0)
-    sheet(paths, [f"Tiller {-B.STEER_MAX:.0f}°", "Straight", f"Tiller +{B.STEER_MAX:.0f}°"], 3,
-          os.path.join(D, "Preview_Boat_Steering.png"))
+    sheet(paths, ["Full left", "Straight", "Full right"], 3, os.path.join(D, "Preview_Boat_Steering.png"),
+          f"Wheel ±{B.WHEEL_MAX:.0f}°, outboard ±{B.STEER_MAX:.0f}°")
 if "checks" in ONLY:
     red, ok = flat_material("CHECK • back", (230, 20, 20)), flat_material("CHECK • front", (200, 200, 200))
     nt = ok.node_tree; out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")

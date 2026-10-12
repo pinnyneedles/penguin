@@ -15,10 +15,10 @@ T = 3.2                         # hull planking thickness
 U_BULK = 0.80                   # the foredeck covers the hull forward of here
 FLOOR_Z = 7.0                   # top of the floorboards
 WATERLINE = 5.0                 # design waterline (keel bottom = 0), below the floorboards so no water shows inside
-SEAT = dict(driver=(-100.0, -72.0, 30.0), middle=(4.0, 26.0, 33.0))   # (x from, x to, top z)
+SEAT = dict(driver=(XS + T + 0.2, -81.0, 22.0), middle=(2.0, 18.0, 22.0))   # (x from, x to, top z), sized for Kai
 SEAT_T = 3.0                    # seat plank thickness
-MOTOR_PIVOT = np.array([XS - 7.0, 0.0, 47.0])   # steering axis of the outboard (vertical through here)
-STEER_MAX = 25.0                # degrees each way
+MOTOR_PIVOT = np.array([XS - 7.0, 0.0, 42.0])   # steering axis of the outboard (vertical through here)
+STEER_MAX = 25.0                # degrees each way (outboard)
 RAKE = 16.0                     # the stem leans forward this much at the gunwale
 
 
@@ -49,7 +49,7 @@ def keel_z(x):
 
 def sheer_z(x):
     u = _u(x)
-    return np.where(u < 0.45, 40.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 40.0 + 20.0 * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
+    return np.where(u < 0.45, 35.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 35.0 + 20.0 * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
 
 
 def _rake_amount(x):
@@ -345,7 +345,6 @@ def hull_pieces():
 # ---------------------------------------------------------------------------
 sd_e, sd_rc, sd_cap, smin, smax = KG.sd_ellipsoid, KG.sd_round_cone, KG.sd_capsule, KG.smin, KG.smax
 PROP_C = np.array([XS - 9.0, 0.0, -5.0])      # propeller hub centre
-TILLER_GRIP = np.array([XS + 36.0, 0.0, 47.5])  # middle of the tiller's rubber grip (straight ahead)
 
 
 def sd_box(P, c, h, r=0.0):
@@ -355,7 +354,8 @@ def sd_box(P, c, h, r=0.0):
 
 def _motor_parts(P):
     """Distances to the outboard's parts, steering straight: a big rounded cowl over a cream band, a swivel tube on
-    the steering axis, the leg down to the gearcase and skeg, and the tiller reaching forward over the transom."""
+    the steering axis, the leg down to the gearcase and skeg, and a short steering arm where the wheel's cable
+    connects (the boat is steered from the console)."""
     pv = MOTOR_PIVOT
     cx = pv[0] - 6.5
     cowl = sd_e(P, np.array([cx, 0, pv[2] + 15.5]), np.array([15.0, 11.5, 12.5]))
@@ -366,30 +366,30 @@ def _motor_parts(P):
     leg = smin(leg, sd_e(P, np.array([cx + 1.0, 0, PROP_C[2] + 6.8]), np.array([10.0, 6.8, 0.9])), 1.0)  # cavitation plate
     leg = smin(leg, sd_cap(P, np.array([cx + 7.5, 0, PROP_C[2]]), np.array([PROP_C[0] + 1.2, 0, PROP_C[2]]), 3.7), 1.6)
     leg = smin(leg, sd_box(P, np.array([cx + 2.0, 0, PROP_C[2] - 6.5]), (4.2, 0.8, 4.2), 0.7), 1.0)     # skeg
-    arm = sd_rc(P, np.array([cx + 11.0, 0, pv[2] + 6.5]), TILLER_GRIP - np.array([8.0, 0, 0]), 3.0, 2.3)
-    grip = sd_cap(P, TILLER_GRIP - np.array([7.5, 0, 0]), TILLER_GRIP + np.array([6.0, 0, 0]), 2.6)
-    return dict(cowl=cowl, band=band, leg=leg, arm=arm, grip=grip)
+    link = sd_rc(P, pv + np.array([2.0, 0, 6.2]), pv + np.array([9.5, 0, 5.6]), 1.7, 1.2)          # steering arm
+    link = smin(link, sd_e(P, pv + np.array([10.2, 0, 5.6]), np.array([1.7, 1.7, 1.7])), 0.5)
+    return dict(cowl=cowl, band=band, leg=leg, link=link)
 
 
 def motor_sdf(P):
     c = _motor_parts(P)
     d = smin(c["cowl"], c["band"], 1.4)
     d = smin(d, c["leg"], 2.0)
-    return np.minimum(smin(d, c["arm"], 2.2), c["grip"])
+    return smin(d, c["link"], 1.2)
 
 
-MOTOR_PAINT = dict(cowl=0, band=1, arm=1, leg=2, grip=3)
+MOTOR_PAINT = dict(cowl=0, band=1, leg=2, link=2)
 
 
 def motor_part(P):
-    """Which part of the motor a point belongs to (for painting): 0 cowl, 1 band and tiller, 2 metal, 3 grip."""
+    """Which part of the motor a point belongs to (for painting): 0 cowl, 1 band, 2 metal."""
     c = _motor_parts(P)
     names = list(c)
     near = np.argmin(np.stack([c[n] for n in names]), axis=0)
     return np.array([MOTOR_PAINT[n] for n in names])[near]
 
 
-MOTOR_BOX = ((XS - 26.0, TILLER_GRIP[0] + 10.0), (-14.0, 14.0), (PROP_C[2] - 13.0, MOTOR_PIVOT[2] + 30.0))
+MOTOR_BOX = ((XS - 26.0, MOTOR_PIVOT[0] + 14.0), (-14.0, 14.0), (PROP_C[2] - 13.0, MOTOR_PIVOT[2] + 30.0))
 
 
 # ---------------------------------------------------------------------------
@@ -411,8 +411,8 @@ def clamp_sdf(P):
             d = smin(d, sd_cap(P, np.array([XS - 2.2, 4.0 * s, z]), np.array([pv[0] + 2.4, 3.6 * s, z]), 1.2), 0.6)
     for s in (1, -1):                                                                               # T-handle screws
         y = 4.2 * s; z = zt - 3.0
-        d = np.minimum(d, sd_cap(P, np.array([XS + T + 1.5, y, z]), np.array([XS + T + 5.5, y, z]), 0.75))
-        d = np.minimum(d, sd_cap(P, np.array([XS + T + 5.5, y, z - 2.4]), np.array([XS + T + 5.5, y, z + 2.4]), 0.8))
+        d = np.minimum(d, sd_cap(P, np.array([XS + T + 1.5, y, z]), np.array([XS + T + 3.4, y, z]), 0.75))
+        d = np.minimum(d, sd_cap(P, np.array([XS + T + 3.4, y, z - 2.2]), np.array([XS + T + 3.4, y, z + 2.2]), 0.75))
     return d
 
 
@@ -440,6 +440,81 @@ BOW_BOX = ((XB - 45.0, XB - 6.0), (-4.0, 4.0), (deck_z(XB - 45.0) - 3.0, deck_z(
 BOW_LIGHT[2] = deck_z(BOW_LIGHT[0]) + 4.6
 
 
+# ---------------------------------------------------------------------------
+# Helm: a small wooden console in front of the stern seat, with a steering wheel on a short column (the wheel is its
+# own mesh so it can turn) and a throttle lever. The wheel steers the outboard by cable.
+# ---------------------------------------------------------------------------
+WHEEL_C = np.array([-65.0, 0.0, 42.5])                  # hub centre
+WHEEL_FWD = np.array([0.91, 0.0, -0.41]) / np.linalg.norm([0.91, 0.0, -0.41])   # wheel axis, away from the driver
+WHEEL_UP = np.cross(WHEEL_FWD, [0.0, 1.0, 0.0])          # 12 o'clock on the wheel
+WHEEL_R, WHEEL_RIM = 8.2, 0.95                           # rim radius and thickness
+WHEEL_MAX = 60.0                                         # degrees each way at full lock
+WHEEL_FRAME = np.column_stack([WHEEL_FWD, [0.0, 1.0, 0.0], WHEEL_UP])   # wheel's local axes in the boat frame
+CONSOLE = dict(x0=-55.0, x1=-43.0, half_w=10.0, top_back=40.0, top_front=44.5)
+
+
+def console_sdf(P):
+    c = CONSOLE
+    xm = 0.5 * (c["x0"] + c["x1"]); hx = 0.5 * (c["x1"] - c["x0"])
+    zt = 0.5 * (c["top_back"] + c["top_front"])
+    d = sd_box(P, np.array([xm, 0, 0.5 * (FLOOR_Z - 1.0 + c["top_front"])]),
+               (hx, c["half_w"], 0.5 * (c["top_front"] - FLOOR_Z + 1.0)), 1.6)
+    slope = (c["top_front"] - c["top_back"]) / (c["x1"] - c["x0"])
+    n = np.array([-slope, 0, 1.0]) / math.hypot(slope, 1.0)                    # the sloping dash top
+    d = smax(d, (P - np.array([xm, 0, zt])) @ n, 1.2)
+    col_end = WHEEL_C + WHEEL_FWD * 1.0
+    col_start = WHEEL_C + WHEEL_FWD * ((c["x0"] + 1.0 - WHEEL_C[0]) / WHEEL_FWD[0])
+    d = smin(d, sd_rc(P, col_start, col_end, 2.1, 1.4), 1.0)                   # steering column
+    for k, yy in enumerate((5.4,)):                                            # a round gauge on the back face
+        d = smin(d, sd_cap(P, np.array([c["x0"] - 0.2, yy, GAUGE_Z]), np.array([c["x0"] - 1.2, yy, GAUGE_Z]), 2.3), 0.4)
+    lever0 = np.array([c["x0"] + 4.0, -c["half_w"] - 0.4, c["top_back"] + 1.5])        # throttle lever, right side
+    lever1 = lever0 + np.array([-4.5, -1.4, 7.0])
+    d = np.minimum(d, sd_box(P, lever0 + np.array([0, 0.6, -1.5]), (2.6, 1.0, 2.6), 0.6))
+    d = np.minimum(d, sd_cap(P, lever0, lever1, 0.7))
+    d = np.minimum(d, sd_e(P, lever1, np.array([1.6, 1.6, 1.6])))
+    return d
+
+
+GAUGE_Z = 34.5
+THROTTLE_KNOB = np.array([CONSOLE["x0"] - 0.5, -CONSOLE["half_w"] - 1.8, CONSOLE["top_back"] + 8.5])
+CONSOLE_BOX = ((CONSOLE["x0"] - 8.0, CONSOLE["x1"] + 2.0), (-CONSOLE["half_w"] - 5.0, CONSOLE["half_w"] + 2.0),
+               (FLOOR_Z - 1.5, CONSOLE["top_front"] + 12.0))
+
+
+def wheel_sdf(Q):
+    """The steering wheel in its own frame (X along the axis, away from the driver; Z up at 12 o'clock): a fat rim,
+    three spokes (3, 6 and 9 o'clock) and a domed hub."""
+    r = np.hypot(Q[:, 1], Q[:, 2])
+    d = np.hypot(r - WHEEL_R, Q[:, 0]) - WHEEL_RIM
+    hub = sd_cap(Q, np.array([-0.9, 0, 0]), np.array([1.0, 0, 0]), 2.2)
+    d = smin(d, hub, 0.6)
+    for v in (np.array([0, -1.0, 0]), np.array([0, 0, -1.0]), np.array([0, 1.0, 0])):     # 3, 6 and 9 o'clock
+        d = smin(d, sd_cap(Q, np.array([0.2, 0, 0]) + v * 1.5, np.array([0.3, 0, 0]) + v * (WHEEL_R - 0.4), 0.75), 0.5)
+    return d
+
+
+def wheel_part(Q):
+    """0 rim, 1 spokes, 2 hub, 3 hub cap (the face toward the driver)."""
+    r = np.hypot(Q[:, 1], Q[:, 2])
+    out = np.ones(len(Q), int)
+    out[r > WHEEL_R - 1.6] = 0
+    out[r < 2.6] = 2
+    out[(r < 1.7) & (Q[:, 0] < -1.6)] = 3
+    return out
+
+
+WHEEL_BOX = ((-3.5, 3.5), (-WHEEL_R - 2, WHEEL_R + 2), (-WHEEL_R - 2, WHEEL_R + 2))
+
+
+def wheel_grip(side, turn=0.0):
+    """Where Kai's hand closes on the rim (boat frame): 10 o'clock (left) or 2 o'clock (right), with the wheel turned
+    `turn` degrees (+ = anticlockwise as the driver sees it, turning the boat left)."""
+    s = 1.0 if side == "L" else -1.0
+    a = math.radians(60.0 * s + turn)
+    q = np.array([0.0, WHEEL_R * math.sin(a), WHEEL_R * math.cos(a)])
+    return WHEEL_C + WHEEL_FRAME @ q, WHEEL_FRAME @ np.array([0.0, math.sin(a), math.cos(a)])
+
+
 def prop_sdf(P):
     """Three rounded, slightly twisted blades round a hub, on an axis along X through PROP_C."""
     q = P - PROP_C
@@ -465,7 +540,7 @@ PROP_BOX = ((PROP_C[0] - 5, PROP_C[0] + 5), (-11, 11), (PROP_C[2] - 11, PROP_C[2
 # ---------------------------------------------------------------------------
 # Sockets (name -> (location, forward x-axis, up z-axis)), in the hull's frame
 # ---------------------------------------------------------------------------
-KAI_ROOT = np.array([-77.0, 13.0, FLOOR_Z])       # where Kai's root bone goes while driving (feet on the floorboards)
+KAI_ROOT = np.array([-86.6, 0.0, FLOOR_Z])       # where Kai's root bone goes while driving (feet on the floorboards)
 CAPSULE_HALF = 52.0                               # Kai's capsule half height (his guide: mesh Z -52)
 
 
@@ -475,11 +550,13 @@ def sockets():
     S = {
         "Seat_Driver": (KAI_ROOT + np.array([0, 0, CAPSULE_HALF]), f, up),
         "Driver_Root": (KAI_ROOT, f, up),
-        "Seat_Passenger": (np.array([15.0, 0, FLOOR_Z + CAPSULE_HALF]), f, up),
-        "Exit_Port": (np.array([-30.0, 95.0, 45.0 + CAPSULE_HALF]), f, up),         # beside the boat at gunwale height;
-        "Exit_Starboard": (np.array([-30.0, -95.0, 45.0 + CAPSULE_HALF]), f, up),   # the Blueprint traces down for ground
+        "Seat_Passenger": (np.array([12.4, 0, FLOOR_Z + CAPSULE_HALF]), f, up),
+        "Exit_Port": (np.array([-30.0, 95.0, 40.0 + CAPSULE_HALF]), f, up),         # beside the boat at gunwale height;
+        "Exit_Starboard": (np.array([-30.0, -95.0, 40.0 + CAPSULE_HALF]), f, up),   # the Blueprint traces down for ground
         "Board_Stand": (np.array([-30.0, 0, FLOOR_Z + CAPSULE_HALF]), f, up),
         "Motor_Mount": (MOTOR_PIVOT, f, up),
+        "Wheel": (WHEEL_C, WHEEL_FWD, WHEEL_UP),
+        "Throttle": (THROTTLE_KNOB, f, up),
         "Camera_Boom": (np.array([-40.0, 0, 70.0]), f, up),
         "Bow_Spray_L": (np.array([70.0, 46.0, zw + 2]), f, up),
         "Bow_Spray_R": (np.array([70.0, -46.0, zw + 2]), f, up),
@@ -495,5 +572,5 @@ def sockets():
 
 def motor_sockets():
     f, up = np.array([1.0, 0, 0]), np.array([0, 0, 1.0])
-    return {"Propeller": (PROP_C, f, up), "Tiller_Grip": (TILLER_GRIP, f, up),
+    return {"Propeller": (PROP_C, f, up),
             "Exhaust": (MOTOR_PIVOT + np.array([-14.0, 0, 6.0]), -f, up)}

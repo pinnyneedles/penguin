@@ -28,7 +28,8 @@ os.makedirs(OUT, exist_ok=True)
 T0 = time.time()
 
 # mesh: (marching-cubes spacing (cm), triangle budget, texture size)
-SPEC = {"SM_Boat_Hull": (None, None, 2048), "SM_Boat_Motor": (0.3, 6000, 1024), "SM_Boat_Propeller": (0.12, 1600, 256)}
+SPEC = {"SM_Boat_Hull": (None, None, 2048), "SM_Boat_Motor": (0.3, 6000, 1024), "SM_Boat_Propeller": (0.12, 1600, 256),
+        "SM_Boat_Wheel": (0.1, 2400, 512)}
 if DRAFT:
     SPEC = {k: (h and h * 1.6, n and n // 2, max(256, t // 2)) for k, (h, n, t) in SPEC.items()}
 
@@ -150,7 +151,8 @@ def finish(ob, painter, size, offset=(0, 0, 0)):
 V, F, piece = [], [], []
 o = 0
 pieces = [(m.name,) + m.arrays() for m in B.hull_pieces()]
-for name, sdf, box, h, budget in (("clamp", B.clamp_sdf, B.CLAMP_BOX, 0.2, 2400), ("bow", B.bow_sdf, B.BOW_BOX, 0.12, 1400)):
+for name, sdf, box, h, budget in (("clamp", B.clamp_sdf, B.CLAMP_BOX, 0.2, 2400), ("bow", B.bow_sdf, B.BOW_BOX, 0.12, 1400),
+                                  ("console", B.console_sdf, B.CONSOLE_BOX, 0.22, 4000)):
     v, f = KG.polygonize(sdf, box, h * (1.4 if DRAFT else 1)); n_mc = len(f)
     v, f = decimated(v, f, budget // (2 if DRAFT else 1))
     log(name, "marching cubes", n_mc, "->", len(f), "faces")
@@ -175,6 +177,14 @@ log("propeller marching cubes", n_mc, "->", len(F), "faces")
 prop = mesh_object("SM_Boat_Propeller", V - B.PROP_C, F, np.zeros(len(F)), 50)
 prop.parent = motor; prop.location = Vector(B.PROP_C - B.MOTOR_PIVOT)
 finish(prop, BT.paint_prop, size, B.PROP_C)
+
+h, budget, size = SPEC["SM_Boat_Wheel"]
+V, F = KG.polygonize(B.wheel_sdf, B.WHEEL_BOX, h); n_mc = len(F)
+V, F = decimated(V, F, budget)
+log("wheel marching cubes", n_mc, "->", len(F), "faces")
+wheel = mesh_object("SM_Boat_Wheel", V, F, np.zeros(len(F)), 50)
+wheel.matrix_world = Matrix.Translation(Vector(B.WHEEL_C)) @ Matrix(B.WHEEL_FRAME.tolist()).to_4x4()
+finish(wheel, BT.paint_wheel, size)
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +267,10 @@ def hull_collision():
     # transom, and the motor pad on top of it
     ring = B._ring(B.XS, False)
     out.append(np.vstack([ring, ring + np.array([B.T, 0, 0]), *[c for c in B.motor_pad().arrays()[:1]]]))
+    # the helm console
+    c = B.CONSOLE
+    out.append(np.array([[x, y, z] for x in (c["x0"], c["x1"]) for y in (-c["half_w"], c["half_w"])
+                         for z in (B.FLOOR_Z, c["top_back"] + (c["top_front"] - c["top_back"]) * (x - c["x0"]) / (c["x1"] - c["x0"]))]))
     # seats
     for x0, x1, top in B.SEAT.values():
         out.append(B.fitted_plank(x0, x1, top - B.SEAT_T, top, 0.1)[0])
@@ -316,18 +330,19 @@ def export_fbx(ob):
     bpy.context.view_layer.update()
 
 
-for ob in (hull, motor, prop):
+for ob in (hull, motor, prop, wheel):
     export_fbx(ob)
 for o in list(COLL.objects): o.hide_set(True)
-log("exported", 3, "FBX files")
+log("exported", 4, "FBX files")
 
 stats = dict(
     meshes={ob.name: dict(vertices=len(ob.data.vertices), triangles=sum(len(p.vertices) - 2 for p in ob.data.polygons),
                           texture=f"T_{ob.name[3:]}_BaseColor", texture_size=SPEC[ob.name][2],
                           collision=[c.name for c in ob.children if c.name.startswith("UCX_")],
-                          sockets=[c.name[7:] for c in ob.children if c.name.startswith("SOCKET_")]) for ob in (hull, motor, prop)},
+                          sockets=[c.name[7:] for c in ob.children if c.name.startswith("SOCKET_")]) for ob in (hull, motor, prop, wheel)},
     length_cm=round(B.XB - B.XS + 1.6, 1), beam_cm=round(2 * (float(B.gunwale_w(np.linspace(B.XS, B.XB, 400)).max()) + 3.5), 1),
     motor_pivot_cm=B.MOTOR_PIVOT.tolist(), propeller_cm=B.PROP_C.tolist(), steer_max_deg=B.STEER_MAX,
+    wheel_cm=B.WHEEL_C.tolist(), wheel_max_deg=B.WHEEL_MAX,
     waterline_cm=B.WATERLINE, floor_cm=B.FLOOR_Z, kai_root_cm=B.KAI_ROOT.tolist())
 json.dump(stats, open(os.path.join(OUT, "source_stats.json"), "w"), indent=2)
 for img in bpy.data.images:
