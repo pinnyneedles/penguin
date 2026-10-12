@@ -151,7 +151,7 @@ def finish(ob, painter, size, offset=(0, 0, 0)):
 V, F, piece = [], [], []
 o = 0
 pieces = [(m.name,) + m.arrays() for m in B.hull_pieces()]
-for name, sdf, box, h, budget in (("clamp", B.clamp_sdf, B.CLAMP_BOX, 0.2, 2400), ("bow", B.bow_sdf, B.BOW_BOX, 0.12, 1400),
+for name, sdf, box, h, budget in (("clamp", B.clamp_sdf, B.CLAMP_BOX, 0.2, 4000), ("bow", B.bow_sdf, B.BOW_BOX, 0.12, 1400),
                                   ("console", B.console_sdf, B.CONSOLE_BOX, 0.22, 4000)):
     v, f = KG.polygonize(sdf, box, h * (1.4 if DRAFT else 1)); n_mc = len(f)
     v, f = decimated(v, f, budget // (2 if DRAFT else 1))
@@ -226,8 +226,6 @@ for a in range(0, 120, 5):
 prop.rotation_euler = (0, 0, 0); bpy.context.view_layer.update()
 CLEARANCE["propeller_vs_motor_spinning"] = spin
 log("clearance", CLEARANCE)
-if any(CLEARANCE.values()) and not DRAFT:
-    sys.exit(f"moving parts collide: {CLEARANCE}")
 
 
 # ---------------------------------------------------------------------------
@@ -392,3 +390,5 @@ for img in bpy.data.images:
     if img.filepath: img.filepath = "//" + os.path.basename(img.filepath)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "Boat.blend"), relative_remap=False)
 log("saved", os.path.join(OUT, "Boat.blend"))
+if any(CLEARANCE.values()) and not DRAFT:
+    sys.exit(f"moving parts collide: {CLEARANCE}")

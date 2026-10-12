@@ -346,7 +346,7 @@ def hull_pieces():
 # Outboard motor and propeller (signed distance functions, in the boat frame at rest, steering straight)
 # ---------------------------------------------------------------------------
 sd_e, sd_rc, sd_cap, smin, smax = KG.sd_ellipsoid, KG.sd_round_cone, KG.sd_capsule, KG.smin, KG.smax
-SWIVEL_R = 2.2                                # swivel tube radius (turns inside the clamp's collars)
+SWIVEL_R = 2.0                                # swivel tube radius (turns inside the clamp's collars)
 LEG_X = MOTOR_PIVOT[0] - 10.5                # the outboard's leg, behind the steering axis (clear of the clamp's collars)
 PROP_C = np.array([LEG_X - 6.8, 0.0, -5.0])   # propeller hub centre, at the tail of the gearcase
 
