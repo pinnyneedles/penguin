@@ -540,7 +540,14 @@ PROP_BOX = ((PROP_C[0] - 5, PROP_C[0] + 5), (-11, 11), (PROP_C[2] - 11, PROP_C[2
 # ---------------------------------------------------------------------------
 # Sockets (name -> (location, forward x-axis, up z-axis)), in the hull's frame
 # ---------------------------------------------------------------------------
-KAI_ROOT = np.array([-86.6, 0.0, FLOOR_Z])       # where Kai's root bone goes while driving (feet on the floorboards)
+KAI_ROOT = np.array([-86.6, 0.0, FLOOR_Z])
+# Buoyancy sample points for the Blueprint, on the keel's plane (z = 0) and spread evenly round the design centre of
+# mass (x = -14: the outboard and the driver sit aft; the guide offsets Unreal's centre of mass to match), so with equal
+# springs the boat floats level with every pontoon WATERLINE deep.
+DESIGN_COM = np.array([-14.0, 0.0, 13.4])
+PONTOONS = (("Pontoon_Bow", 86.0, 0.0), ("Pontoon_FL", 36.0, 34.0), ("Pontoon_FR", 36.0, -34.0),
+            ("Pontoon_ML", -34.0, 36.0), ("Pontoon_MR", -34.0, -36.0), ("Pontoon_SL", -94.0, 30.0),
+            ("Pontoon_SR", -94.0, -30.0))       # where Kai's root bone goes while driving (feet on the floorboards)
 CAPSULE_HALF = 52.0                               # Kai's capsule half height (his guide: mesh Z -52)
 
 
@@ -563,10 +570,8 @@ def sockets():
         "Wake": (np.array([XS - 9.0, 0, zw]), -f, up),
         "Bow_Light": (rake(BOW_LIGHT), f, up),
     }
-    for name, x, y in (("Pontoon_Bow", 88.0, 0.0), ("Pontoon_FL", 35.0, 34.0), ("Pontoon_FR", 35.0, -34.0),
-                       ("Pontoon_ML", -30.0, 34.0), ("Pontoon_MR", -30.0, -34.0), ("Pontoon_SL", -92.0, 30.0),
-                       ("Pontoon_SR", -92.0, -30.0)):
-        S[name] = (np.array([x, y, float(keel_z(x)) + 2.0]), f, up)
+    for name, x, y in PONTOONS:
+        S[name] = (np.array([x, y, 0.0]), f, up)
     return S
 
 

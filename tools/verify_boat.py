@@ -125,6 +125,41 @@ for name, exp in EXPECT.items():
     print(f"{name:20s} tris {r['triangles']:6d}  collision {r['collision']:2d}  sockets {len(r['sockets']):2d}  "
           f"bounds {r['bounds_cm']}", flush=True)
 
+# Kai's driving poses: animation-only FBX files on Kai's skeleton
+import kai_geometry as G
+SKEL = {b[0] for b in G.skeleton()}
+dp = os.path.join(D, "driving_poses.json")
+if check(os.path.exists(dp), "driving_poses.json missing (run kai_boat_pose.py)"):
+    poses = json.load(open(dp))["poses"]
+    for name, pose in poses.items():
+        path = os.path.join(D, name + ".fbx")
+        if not check(os.path.exists(path), f"{name}.fbx missing"): continue
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.fbx(filepath=path, ignore_leaf_bones=False, automatic_bone_orientation=False,
+                                 axis_forward="X", axis_up="Z")
+        arms = [o for o in bpy.data.objects if o.type == "ARMATURE"]
+        meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+        r = dict(file=name + ".fbx", size_mb=round(os.path.getsize(path) / 1e6, 3))
+        if not check(len(arms) == 1, f"{name}: expected one armature"): continue
+        rig = arms[0]
+        check(not meshes, f"{name}: should hold animation only, found meshes")
+        names = {b.name for b in rig.data.bones}
+        check(names == SKEL, f"{name}: bones differ from Kai's skeleton ({len(names)} vs {len(SKEL)})")
+        act = rig.animation_data.action if rig.animation_data else None
+        check(act is not None, f"{name}: no animation")
+        bpy.context.scene.frame_set(int(act.frame_range[0]) if act else 1)
+        M = np.array(rig.matrix_world)
+        err = 0.0
+        for b, h in pose["bone_heads_cm"].items():
+            if b not in rig.pose.bones: continue
+            p = (M[:3, :3] @ np.array(rig.pose.bones[b].head) + M[:3, 3]) * 100.0
+            err = max(err, float(np.linalg.norm(p - np.array(h))))
+        r["pose_max_error_cm"] = round(err, 4)
+        r["frames"] = list(act.frame_range) if act else None
+        check(err < 0.05, f"{name}: pose off by {err:.3f} cm after re-import")
+        report[name] = r
+        print(f"{name:26s} bones {len(names)}  pose error {err:.4f} cm", flush=True)
+
 out = dict(ok=not failures, failures=failures, files=report)
 json.dump(out, open(os.path.join(D, "verify_report.json"), "w"), indent=2)
 print("\n".join(failures) if failures else "", "VERIFY_OK" if not failures else f"VERIFY_FAIL {len(failures)}")

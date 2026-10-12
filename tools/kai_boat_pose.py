@@ -4,11 +4,12 @@
     python3 tools/kai_boat_pose.py [--kai kai] [--boat boat]
 
 Opens kai/Kai.blend, brings in the boat from boat/Boat.blend and seats Kai at the boat's Driver_Root: on the stern
-thwart, feet on the floorboards, both hands on the wheel at ten to two, leaning in a little. Three poses: wheel at full
-left lock, straight ahead, and full right lock (the hands go round with the rim; he leans and looks into the turn).
+thwart, feet on the floorboards, both hands on the wheel at ten to two, leaning in a little. Five poses: full left lock,
+half left, straight ahead, half right and full right (the hands go round with the rim; he leans and looks into the
+turn), so a blend space between neighbours keeps the hands within a few millimetres of the rim.
 For each pose it checks that Kai clears the boat and that his clothes clear each other, bakes the pose onto the
 deform bones and exports it as AN_Kai_Boat_*.fbx (animation only, for SK_Kai_Skeleton). Saves boat/Kai_Boat.blend
-with the boat, Kai and the three actions.
+with the boat, Kai and the five actions.
 """
 import json, math, os, sys
 import numpy as np
@@ -35,8 +36,9 @@ LEAN = 7.0             # the upper body leans into the turn at full lock
 LOOK = 12.0            # and the head turns into it
 TWIST = 12.0           # the chest turns into it too, bringing the far shoulder forward to keep that hand on the rim
 GRIP_CURL = float(argv[argv.index("--curl") + 1]) if "--curl" in argv else 0.9   # how far the fingers close on the rim
-STEER = {"L": -1.0, "C": 0.0, "R": 1.0}        # -1 full left .. 1 full right
-POSE_NAMES = {"L": "AN_Kai_Boat_Steer_Left", "C": "AN_Kai_Boat_Drive", "R": "AN_Kai_Boat_Steer_Right"}
+STEER = {"L": -1.0, "LH": -0.5, "C": 0.0, "RH": 0.5, "R": 1.0}        # -1 full left .. 1 full right
+POSE_NAMES = {"L": "AN_Kai_Boat_Steer_Left", "LH": "AN_Kai_Boat_Steer_Left_Half", "C": "AN_Kai_Boat_Drive",
+              "RH": "AN_Kai_Boat_Steer_Right_Half", "R": "AN_Kai_Boat_Steer_Right"}
 
 bpy.ops.wm.open_mainfile(filepath=os.path.join(KAI, "Kai.blend"))
 sc = bpy.context.scene
@@ -439,13 +441,40 @@ def export_anim(act, path):
 
 if not any(f in argv for f in ("--measure", "--preview", "--closeup")):
     poses, reports = {}, {}
-    for key in ("L", "C", "R"):
+    for key in ("L", "LH", "C", "RH", "R"):
         act, heads, rep = bake(key)
         export_anim(act, os.path.join(BOAT, POSE_NAMES[key] + ".fbx"))
         poses[POSE_NAMES[key]] = dict(steer=STEER[key], wheel_deg=-B.WHEEL_MAX * STEER[key], motor_deg=B.STEER_MAX * STEER[key],
                                       bone_heads_cm=heads)
         reports[POSE_NAMES[key]] = rep
         print(POSE_NAMES[key], json.dumps({k: v for k, v in rep.items() if k != "boat_overlaps"}), flush=True)
+    # halfway between neighbouring poses (what a blend space plays): hands stay on the rim?
+    order = ["L", "LH", "C", "RH", "R"]
+    blends = {}
+    for a, b in zip(order[:-1], order[1:]):
+        A, Bp = bpy.data.actions[POSE_NAMES[a]], bpy.data.actions[POSE_NAMES[b]]
+        poseA, poseB = {}, {}
+        for act, store in ((A, poseA), (Bp, poseB)):
+            rig.animation_data.action = act; sc.frame_set(1)
+            store.update({n: rig.pose.bones[n].matrix_basis.copy() for n in DEFORM})
+        rig.animation_data.action = None
+        for n in DEFORM:
+            la, ra, _ = poseA[n].decompose(); lb, rb, _ = poseB[n].decompose()
+            if ra.dot(rb) < 0: rb = -rb
+            pb = rig.pose.bones[n]
+            pb.location = la.lerp(lb, 0.5); pb.rotation_quaternion = (ra * 0.5 + rb * 0.5).normalized(); pb.scale = (1, 1, 1)
+        bpy.context.view_layer.update()
+        mid = 0.5 * (STEER[a] + STEER[b]); set_boat(mid)
+        errs = []
+        for side, _ in G.SIDES:
+            g, R = grip_frame(side, -B.WHEEL_MAX * mid)
+            hand = A2W @ rig.pose.bones[G.bn("hand", side)].matrix @ GRIP_OFFSET[side]
+            errs.append((hand - Vector(g)).length)
+        Wm = np.array(WHEEL.matrix_world.inverted())
+        Va = tree(bpy.data.objects["SK_Kai_Arms"])[1] @ Wm[:3, :3].T + Wm[:3, 3]
+        blends[f"{POSE_NAMES[a]} + {POSE_NAMES[b]}"] = dict(grip_error_cm=round(max(errs), 2),
+                                                            rim_depth_cm=round(float(max(0.0, -B.wheel_sdf(Va).min())), 2))
+        print("blend", a, b, blends[f"{POSE_NAMES[a]} + {POSE_NAMES[b]}"], flush=True)
     # leave the scene in the straight-ahead pose
     rig.animation_data.action = bpy.data.actions[POSE_NAMES["C"]]; set_boat(0.0); sc.frame_set(1)
     json.dump(dict(kai_root_cm=B.KAI_ROOT.tolist(), seat_driver_cm=B.sockets()["Seat_Driver"][0].tolist(),
@@ -461,7 +490,9 @@ if not any(f in argv for f in ("--measure", "--preview", "--closeup")):
         if hits: bad.append(f"{name}: Kai cuts into the boat: {sorted(hits)}")
         if abs(rep["sole_above_floor_cm"]) > 0.3: bad.append(f"{name}: feet {rep['sole_above_floor_cm']} cm off the floor")
         if rep["bake_error_cm"] > 0.01: bad.append(f"{name}: bake drifted {rep['bake_error_cm']} cm")
-    json.dump(dict(ok=not bad, problems=bad, poses=reports), open(os.path.join(BOAT, "driving_check.json"), "w"), indent=1)
+    for name, rep in blends.items():
+        if rep["grip_error_cm"] > 0.6 or rep["rim_depth_cm"] > 0.6: bad.append(f"{name} blended: hands drift off the rim {rep}")
+    json.dump(dict(ok=not bad, problems=bad, poses=reports, blends=blends), open(os.path.join(BOAT, "driving_check.json"), "w"), indent=1)
     # the scene: Kai's textures packed in, the boat's next to the file
     for img in bpy.data.images:
         if img.name.startswith("T_Kai") and img.filepath: img.pack()

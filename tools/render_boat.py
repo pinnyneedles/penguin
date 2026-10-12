@@ -3,6 +3,7 @@
 Kai's previews.
 
     python3 tools/render_boat.py [boat] [--only hero,turnaround,motor,steer,checks] [--size 640]
+    python3 tools/render_boat.py [boat] --only driving        # Kai at the wheel, from Kai_Boat.blend
 
 checks renders back faces in red (should be none) and the collision pieces, for the build's own checks.
 """
@@ -21,14 +22,18 @@ ONLY = argv[argv.index("--only") + 1].split(",") if "--only" in argv else ["hero
 SIZE = int(argv[argv.index("--size") + 1]) if "--size" in argv else 640
 FRAMES = os.path.join(D, "_previews"); os.makedirs(FRAMES, exist_ok=True)
 
-bpy.ops.wm.open_mainfile(filepath=os.path.join(D, "Boat.blend"))
+DRIVING = "driving" in ONLY
+bpy.ops.wm.open_mainfile(filepath=os.path.join(D, "Kai_Boat.blend" if DRIVING else "Boat.blend"))
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"; sc.cycles.samples = 12; sc.cycles.use_denoising = False
 sc.view_settings.view_transform = "Standard"
 sc.cycles.max_bounces = 0; sc.cycles.transparent_max_bounces = 16
 MESHES = [bpy.data.objects[n] for n in ("SM_Boat_Hull", "SM_Boat_Motor", "SM_Boat_Propeller", "SM_Boat_Wheel")]
 HULL, MOTOR, PROP, WHEEL = MESHES
-WHEEL_REST = WHEEL.matrix_world.copy()
+bpy.context.view_layer.update()
+WHEEL_REST = WHEEL.matrix_basis.copy()
+KAI = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("SK_Kai_") and not o.hide_render]
+RIG = bpy.data.objects.get("Armature")
 for o in bpy.data.objects:
     if o.name.startswith(("UCX_", "SOCKET_")): o.hide_render = True
 
@@ -81,6 +86,23 @@ for ob in MESHES:
     me.materials.clear(); me.materials.append(OUTLINE)
     o = bpy.data.objects.new(ob.name + "_outline", me); sc.collection.objects.link(o)
     o.parent = ob
+    OUTLINES.append(o)
+for ob in KAI:                                    # Kai's parts: outlines follow the skeleton
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    for layer in list(bm.verts.layers.shape): bm.verts.layers.shape.remove(layer)
+    bm.normal_update()
+    width = 0.2 if "Head" not in ob.name else 0.16
+    for v in bm.verts: v.co += v.normal * width
+    bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(ob.name + "_outline"); bm.to_mesh(me); bm.free()
+    me.materials.clear(); me.materials.append(OUTLINE)
+    o = bpy.data.objects.new(ob.name + "_outline", me); sc.collection.objects.link(o)
+    gi = {g.index: g.name for g in ob.vertex_groups}
+    for g in ob.vertex_groups: o.vertex_groups.new(name=g.name)
+    for v in ob.data.vertices:
+        for g in v.groups: o.vertex_groups[gi[g.group]].add([v.index], g.weight, "REPLACE")
+    o.parent = RIG; o.matrix_parent_inverse = ob.matrix_parent_inverse.copy()
+    o.modifiers.new("Armature", "ARMATURE").object = RIG
     OUTLINES.append(o)
 
 water = bpy.data.objects.new("Water", bpy.data.meshes.new("Water")); sc.collection.objects.link(water)
@@ -183,4 +205,28 @@ if "checks" in ONLY:
     HULL.hide_render = False; HULL.data.materials.clear(); HULL.data.materials.append(flat_material("CHECK • hull", (230, 230, 230), 0.25))
     paths = [shot("ucx_%d" % k, *v) for k, v in enumerate(views[:4])]
     sheet(paths, ["bow", "stern", "top", "below"], 2, os.path.join(FRAMES, "Check_Collision.png"), "collision pieces")
+if DRIVING:
+    import json
+    names = {k: v for k, v in zip((-1, 0, 1), ("AN_Kai_Boat_Steer_Left", "AN_Kai_Boat_Drive", "AN_Kai_Boat_Steer_Right"))}
+
+    def drive(amount):
+        RIG.animation_data.action = bpy.data.actions[names[amount]]
+        sc.frame_set(1); steer(amount)
+
+    water.hide_render = False
+    drive(0)
+    a = shot("drive_hero", (300, -330, 120), (-12, 0, 30), lens=42, w=SIZE, h=int(SIZE * 0.72))
+    Image.open(a).save(os.path.join(D, "Preview_Kai_Driving.png"))
+    paths = []
+    for k, amount in enumerate((-1, 0, 1)):
+        drive(amount)
+        paths.append(shot("drive_steer_%d" % k, (-230, 0, 185), (-50, 0, 40), lens=40, w=480, h=400))
+    sheet(paths, ["Steer left", "Straight ahead", "Steer right"], 3, os.path.join(D, "Preview_Kai_Steering.png"),
+          "Driving poses (game camera)")
+    water.hide_render = True
+    drive(0)
+    paths = [shot("drive_close_0", (-40, 120, 75), (-74, 0, 44), lens=50, w=480, h=480),
+             shot("drive_close_1", (40, -70, 85), (-70, 0, 46), lens=50, w=480, h=480),
+             shot("drive_close_2", (-75, 0, 220), (-75, 0, 30), 75, w=480, h=480)]
+    sheet(paths, ["At the wheel", "From the bow", "From above"], 3, os.path.join(D, "Preview_Kai_Driving_Closeup.png"))
 print("RENDER_DONE")
