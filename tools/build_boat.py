@@ -188,6 +188,49 @@ finish(wheel, BT.paint_wheel, size)
 
 
 # ---------------------------------------------------------------------------
+# Moving parts must clear: the outboard at full lock each way against the hull and its clamp, and the propeller
+# through a full turn against the outboard
+# ---------------------------------------------------------------------------
+from mathutils.bvhtree import BVHTree
+
+
+def bvh(ob):
+    M = ob.matrix_world
+    return BVHTree.FromPolygons([M @ v.co for v in ob.data.vertices], [tuple(p.vertices) for p in ob.data.polygons])
+
+
+CLEARANCE = {}
+hull_tree = bvh(hull)
+hull_piece = np.empty(len(hull.data.polygons), np.int32); hull.data.attributes["piece"].data.foreach_get("value", hull_piece)
+for yaw in (-B.STEER_MAX, 0.0, B.STEER_MAX):
+    motor.rotation_euler = (0, 0, math.radians(yaw)); bpy.context.view_layer.update()
+    ov = bvh(motor).overlap(hull_tree)
+    CLEARANCE[f"motor_vs_hull_yaw_{yaw:+.0f}"] = len(ov)
+    if ov:
+        Mw = motor.matrix_world
+        cen = np.array([(Mw @ motor.data.polygons[i].center)[:] for i, j in ov])
+        where = {BT.PIECES[int(k)]: int(n) for k, n in zip(*np.unique(hull_piece[[j for i, j in ov]], return_counts=True))}
+        log("  motor overlaps at yaw", yaw, where, "z", np.round(cen[:, 2].min(), 1), "..", np.round(cen[:, 2].max(), 1),
+            "x", np.round(cen[:, 0].min(), 1), "..", np.round(cen[:, 0].max(), 1))
+motor.rotation_euler = (0, 0, 0); bpy.context.view_layer.update()
+motor_tree = bvh(motor)
+spin = 0
+for a in range(0, 120, 5):
+    prop.rotation_euler = (math.radians(a), 0, 0); bpy.context.view_layer.update()
+    ov = bvh(prop).overlap(motor_tree)
+    if len(ov) > spin:
+        cen = np.array([(motor.matrix_world @ motor.data.polygons[j].center)[:] for i, j in ov])
+        log("  propeller overlaps at", a, "deg: motor faces x", np.round(cen[:, 0].min(), 1), "..", np.round(cen[:, 0].max(), 1),
+            "z", np.round(cen[:, 2].min(), 1), "..", np.round(cen[:, 2].max(), 1))
+    spin = max(spin, len(ov))
+prop.rotation_euler = (0, 0, 0); bpy.context.view_layer.update()
+CLEARANCE["propeller_vs_motor_spinning"] = spin
+log("clearance", CLEARANCE)
+if any(CLEARANCE.values()) and not DRAFT:
+    sys.exit(f"moving parts collide: {CLEARANCE}")
+
+
+# ---------------------------------------------------------------------------
 # Collision: a few convex pieces so Kai can walk on the floorboards inside the boat
 # ---------------------------------------------------------------------------
 def support_points(P, n=64):
@@ -343,7 +386,7 @@ stats = dict(
     length_cm=round(B.XB - B.XS + 1.6, 1), beam_cm=round(2 * (float(B.gunwale_w(np.linspace(B.XS, B.XB, 400)).max()) + 3.5), 1),
     motor_pivot_cm=B.MOTOR_PIVOT.tolist(), propeller_cm=B.PROP_C.tolist(), steer_max_deg=B.STEER_MAX,
     wheel_cm=B.WHEEL_C.tolist(), wheel_max_deg=B.WHEEL_MAX,
-    waterline_cm=B.WATERLINE, floor_cm=B.FLOOR_Z, kai_root_cm=B.KAI_ROOT.tolist())
+    waterline_cm=B.WATERLINE, floor_cm=B.FLOOR_Z, kai_root_cm=B.KAI_ROOT.tolist(), moving_part_overlaps=CLEARANCE)
 json.dump(stats, open(os.path.join(OUT, "source_stats.json"), "w"), indent=2)
 for img in bpy.data.images:
     if img.filepath: img.filepath = "//" + os.path.basename(img.filepath)

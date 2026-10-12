@@ -21,6 +21,8 @@ PAL = dict(
     star=rgb(252, 204, 64), brass=rgb(214, 170, 72), brass_dark=rgb(170, 128, 50),
     lamp_port=rgb(226, 52, 48), lamp_star=rgb(60, 196, 96),
 )
+if "cowl" in B.VARIANT:                       # a cream cowl over a red band, so the motor stands apart from Kai's shirt
+    PAL.update(cowl=rgb(246, 236, 214), band=rgb(212, 46, 40), star=rgb(212, 46, 40))
 PIECES = ["outer", "inner", "rim", "transom", "deck", "bulkhead", "floor", "seats", "rail", "pad", "clamp", "bow", "console"]
 PID = {n: i for i, n in enumerate(PIECES)}
 
@@ -53,6 +55,8 @@ def _topsides(P):
 def _ribs(P):
     """Frames inside the hull: darker strips every 24 cm along the boat."""
     x = B.unrake(P)[:, 0]
+    if "interior" in B.VARIANT:
+        return _lines(x - B.XS - 20.0, 36.0, 1.6)
     return _lines(x - B.XS - 14.0, 24.0, 1.0)
 
 
@@ -70,7 +74,9 @@ def paint_hull(a):
         c[top] = PAL["wood_dark"]
         col[m] = c
     m = piece == PID["inner"]
-    c = mix(np.tile(PAL["wood"], (m.sum(), 1)), PAL["wood_line"], _lines(_height_frac(P[m]) - 0.12, 0.2, 0.014))
+    c = np.tile(PAL["wood"], (m.sum(), 1))
+    if "interior" not in B.VARIANT:
+        c = mix(c, PAL["wood_line"], _lines(_height_frac(P[m]) - 0.12, 0.2, 0.014))
     col[m] = mix(c, PAL["wood_dark"], _ribs(P[m]))
     col[piece == PID["rim"]] = PAL["wood_dark"]
     col[piece == PID["bulkhead"]] = mix(np.tile(PAL["wood"], ((piece == PID["bulkhead"]).sum(), 1)), PAL["wood_line"],
@@ -78,7 +84,8 @@ def paint_hull(a):
     m = piece == PID["deck"]
     col[m] = mix(np.tile(PAL["deck"], (m.sum(), 1)), PAL["wood_line"], _lines(P[m, 1] + 3.5, 7.0, 0.3))
     m = piece == PID["floor"]
-    c = mix(np.tile(PAL["wood"], (m.sum(), 1)), PAL["wood_line"], _lines(P[m, 1] + 4.5, 9.0, 0.35))
+    floor = PAL["deck"] if "interior" in B.VARIANT else PAL["wood"]
+    c = mix(np.tile(floor, (m.sum(), 1)), PAL["wood_line"], _lines(P[m, 1] + 4.5, 9.0, 0.35))
     c[Nn[m, 2] < 0.5] = PAL["wood_dark"]
     col[m] = c
     m = piece == PID["seats"]
@@ -111,8 +118,9 @@ def _console(P, Nn):
     col = mix(np.tile(PAL["wood"], (len(P), 1)), PAL["wood_line"], _lines(P[:, 2] - B.FLOOR_Z, 7.5, 0.3))
     slope = (c["top_front"] - c["top_back"]) / (c["x1"] - c["x0"])
     ztop = c["top_back"] + slope * (P[:, 0] - c["x0"])
-    col[P[:, 2] > ztop - 3.2] = PAL["navy"]                                  # trim band
-    col[(P[:, 2] > ztop - 0.8) & (Nn[:, 2] > 0.6)] = PAL["cream"]             # dash top
+    below = ztop - P[:, 2]                                                    # depth under the dash top
+    col = mix(col, PAL["navy"], sstep(3.4, 3.0, below))                       # trim band, soft-edged
+    col = mix(col, PAL["cream"], sstep(0.9, 0.6, below))                      # dash top
     q = P - B.WHEEL_C
     along = q @ B.WHEEL_FWD
     radial = np.linalg.norm(q - np.outer(along, B.WHEEL_FWD), axis=1)
@@ -133,13 +141,17 @@ def paint_wheel(a):
     """The steering wheel, painted in its own frame: red rim, cream spokes, navy hub with a yellow star cap."""
     P, Nn, piece, loc = unpack(a)
     part = B.wheel_part(P)
-    col = np.array([PAL["cowl"], PAL["band"], PAL["navy"], PAL["star"]])[part]
+    if "console" in B.VARIANT:                    # cream rim, wooden spokes, red hub with a yellow star
+        col = np.array([PAL["band"], PAL["seat"], PAL["cowl"], PAL["star"]])[part]
+    else:
+        col = np.array([PAL["cowl"], PAL["band"], PAL["navy"], PAL["star"]])[part]
     ang = np.arctan2(P[:, 2], P[:, 1]); r = np.hypot(P[:, 1], P[:, 2])
     rim = part == 0
-    col[rim] = mix(col[rim], PAL["red_line"], _lines(ang[rim] * B.WHEEL_R, 2.2, 0.25) * (P[rim, 0] > 0))
+    line = PAL["cream_line"] if "console" in B.VARIANT else PAL["red_line"]
+    col[rim] = mix(col[rim], line, _lines(ang[rim] * B.WHEEL_R, 2.2, 0.25) * (P[rim, 0] > 0))
     k = 0.5 + 0.5 * np.cos(5 * (ang - np.pi / 2))
     star = (part == 3) & (r < 0.55 + 0.75 * k ** 3)
-    col[(part == 3) & ~star] = PAL["navy"]
+    col[(part == 3) & ~star] = PAL["cowl"] if "console" in B.VARIANT else PAL["navy"]
     return col
 
 

@@ -74,10 +74,13 @@ Plan on about an hour the first time. You need Kai imported first (`Kai_Unreal.z
     **If the dialog has sections called Common, Common Meshes and Static Meshes (Interchange importer):**
 
     - Static Meshes: **Import Static Meshes** on, **Combine Static Meshes** off, **Import Collision** on,
-      **Import Collision According To Mesh Name** on, **One Convex Hull Per UCX** on, **Import Sockets** on,
-      **Auto Generate Collision** off.
+      **Import Collision According To Mesh Name** on, **One Convex Hull Per UCX** on. The `UCX_` pieces then
+      replace any generated collision, whatever the Collision type dropdown says, and the sockets import by
+      themselves.
     - Common Meshes: **Recompute Normals** off, **Recompute Tangents** off.
     - Common: **Offset Uniform Scale** 1.0.
+
+    If an option isn't in your version's dialog, skip it.
 
     **If you see the older FBX Import Options dialog:**
 
@@ -111,9 +114,10 @@ post-process outline also works.
 1. Open `Animations` and **Import** the five files in `Content/Animations`.
 2. Options: **Skeleton** = `SK_Kai_Skeleton`, **Import Mesh** (or Import Skeletal Meshes) off,
    **Import Animations** on. In the Interchange dialog, also turn **Import Only Animations** on. Leave the scale at 1.0.
-3. Each clip is a held pose, two frames long. Open each one and set **Loop** on in the Asset Details (or tick Loop in
-   the blend space samples).
-4. Create a **Blend Space 1D** on `SK_Kai_Skeleton`, named `BS_Kai_Boat_Steer`. Set the horizontal axis name to
+3. Each clip is a held pose, two frames long. The blend space plays them on a loop (the **Loop** pin on its player
+   node is on by default), so nothing needs changing on the clips.
+4. Create a **Blend Space 1D** on `SK_Kai_Skeleton`, named `BS_Kai_Boat_Steer`. It is under **Animation**, or
+   **Animation → Legacy** in recent 5.x versions. Set the horizontal axis name to
    `Steer`, Minimum −1, Maximum 1, Grid Divisions 4. Place the samples:
 
     | Steer | Animation |
@@ -152,7 +156,7 @@ Create these with **Enhanced Input** in a folder `Input`:
 
 | Asset | Type | Mappings |
 |---|---|---|
-| `IA_Boat_Throttle` | Input Action, Value Type **Axis1D (float)** | W; S with a **Negate** modifier; Gamepad Right Trigger; Gamepad Left Trigger with **Negate** |
+| `IA_Boat_Throttle` | Input Action, Value Type **Axis1D (float)** | W; S with a **Negate** modifier; **Gamepad Right Trigger Axis**; **Gamepad Left Trigger Axis** with **Negate** (the plain Trigger keys are on/off only) |
 | `IA_Boat_Steer` | Input Action, **Axis1D (float)** | D; A with **Negate**; Gamepad Left Thumbstick X-Axis with a **Dead Zone** modifier |
 | `IA_Boat_Exit` | Input Action, **Digital (bool)** | E; Gamepad Face Button Left |
 | `IMC_Boat` | Input Mapping Context | the three actions above |
@@ -162,7 +166,11 @@ he already has an interact action, use that.
 
 ## Step 6: The boat Blueprint
 
-Create a Blueprint Class from **Pawn**, named `BP_KaiBoat`.
+Create a Blueprint Class from **Pawn**, named `BP_KaiBoat`. In **Class Defaults**:
+
+- Pawn: untick **Use Controller Rotation Pitch**, **Yaw** and **Roll**. Otherwise the controller sets the boat's
+  rotation every frame and it can't turn.
+- Pawn: **Auto Possess AI** = Disabled, so no AI controller takes the boat at the start.
 
 ### Components
 
@@ -173,12 +181,13 @@ Hull            Static Mesh   SM_Boat_Hull        (make it the root: drag it ont
 ├─ Motor        Static Mesh   SM_Boat_Motor       socket Motor_Mount
 │  └─ Propeller Static Mesh   SM_Boat_Propeller   socket Propeller
 ├─ Wheel        Static Mesh   SM_Boat_Wheel       socket Wheel
-├─ BoardingZone Box Collision                     location (0, 0, 40), Box Extent (170, 100, 70)
+├─ BoardingZone Box Collision                     location (0, 0, 40), Box Extent (230, 160, 70)
 └─ SpringArm    Spring Arm                        socket Camera_Boom
    └─ Camera    Camera
 ```
 
-Leave every component's location and rotation at zero, apart from the BoardingZone's location.
+Leave every component's location and rotation at zero, apart from the BoardingZone's location and the SpringArm's
+pitch.
 
 **Hull** (Details panel):
 
@@ -251,7 +260,8 @@ Use **Sin (Degrees)**. If your water plane has animated waves, match WaveHeight,
         - `Push` = **Max**(0, BuoyStiffness × **Min**(Depth, BuoyMaxDepth) − BuoyDamping × Vz)
         - Hull → **Add Force at Location** (Force = (0, 0, Push), Location = P)
         - `Wet` = Wet + 1
-3. `WetFraction` = Wet / length of `PontoonSockets`.
+3. `WetFraction` = **To Float**(Wet) ÷ **To Float**(length of `PontoonSockets`). Convert both first: integer
+   division in Blueprints rounds down to 0.
 
 At rest each pontoon is 5 cm under water. 7 × 4200 × 5 = 147,000, which carries 150 kg against Unreal's gravity of
 980 cm/s².
@@ -319,9 +329,10 @@ step.
 
 In **BP_Kai**, add **IA_Interact** (Started):
 - Call **Get Overlapping Actors** (Class Filter `BP_KaiBoat`).
-- If the array has an element, call **EnterBoat** on the first one with NewDriver = Self.
+- If the array has an element: **Get** (index 0) → **Cast To BP_KaiBoat** → **EnterBoat** with NewDriver = Self.
+  The array holds plain Actors even with the filter, so the cast is needed.
 
-`BP_KaiBoat`'s BoardingZone reaches about a metre round the boat, so Kai can board from a jetty or the shore.
+The BoardingZone reaches about a metre round the boat, so Kai can board from a jetty or the shore.
 
 ### Getting out: `ExitBoat`
 
@@ -331,19 +342,22 @@ In **BP_Kai**, add **IA_Interact** (Started):
     - **Line Trace By Channel** from Start to Start − (0, 0, 300), channel Visibility, Actors to Ignore = Self and
       Driver.
     - Use the first hit whose Impact Point Z is more than 5 above GetWaterHeight(Impact Point). That is ground, not
-      water. `Spot` = Impact Point + (0, 0, 54).
+      water. `Spot` = Impact Point + (0, 0, Driver → Get Capsule Component → **Get Scaled Capsule Half Height** + 2).
 3. If neither side hits ground, stay in the boat: **Return**. Optionally play a "can't get off here" sound.
 4. Driver → **Detach From Actor** (Keep World for location, rotation and scale).
-5. Driver → **Teleport** to Spot, with rotation = (0, Hull world yaw, 0).
+5. Driver → **Teleport** to Spot. Dest Rotation = **Make Rotator** (Roll 0, Pitch 0, Yaw = Hull → Get World
+   Rotation → Yaw). Rotator pins run Roll, Pitch, Yaw.
 6. Driver → **Set Actor Enable Collision** (true). Driver → Get Character Movement → **Set Movement Mode** (Walking).
 7. Driver's Anim Blueprint → set `IsDriving` = false.
-8. **Get Controller** (of Self) → Get Enhanced Input Local Player Subsystem → **Remove Mapping Context** (IMC_Boat).
-   Then that controller → **Possess** (Driver).
+8. **Get Controller** (of Self) → **Cast To PlayerController**, store it in a local `PC`:
+    - `PC` → Get Enhanced Input Local Player Subsystem → **Remove Mapping Context** (IMC_Boat).
+    - Then `PC` → **Possess** (Driver).
 9. Set ThrottleInput, SteerInput, Throttle and Steer to 0, and `Driver` to none.
 
 ### Check it
 
-Put a large plane at Z = 0 with a water-blue material, and place `BP_KaiBoat` on it. Then press Play.
+Put a large plane at Z = 0 with a water-blue material and set its **Collision Presets** to **NoCollision**: buoyancy
+is all that holds the boat up, and a solid plane would hold it instead. Place `BP_KaiBoat` on it, then press Play.
 
 - **Floating:** the boat should drop, bob once or twice and settle level within about a second, with the navy stripe
   just above the water. If the bow sits low, make the Center Of Mass Offset X more negative (−30). If the stern sits
@@ -410,6 +424,9 @@ The Blueprint above works on any flat water at `WaterHeight`. With the Water plu
 | Problem | Fix |
 |---|---|
 | The boat sinks | `WaterHeight` doesn't match your water, or the Mass override is off (Unreal then uses a much heavier mass from the collision). |
+| The boat sits on the water like a block and never bobs | The water mesh has collision. Set it to NoCollision (Step 6, Check it). |
+| The boat won't turn, or snaps to face the camera | Untick Use Controller Rotation Pitch, Yaw and Roll in the Pawn's Class Defaults (Step 6). |
+| Drag disappears when the boat rocks | WetFraction uses integer division. Convert to float first (ApplyBuoyancy, step 3). |
 | The boat shoots into the air | BuoyStiffness or Thrust has an extra zero, or ApplyBuoyancy runs more than once per tick. |
 | It bounces forever | Raise BuoyDamping. Check that Linear Damping is 0.05, not 0. |
 | It spins on the spot when turning | SideDrag is 0, or the keel points are not set (ApplyWaterDrag step 3). |

@@ -5,12 +5,13 @@ centreline, at the bottom of the keel amidships. The hull is built from parametr
 parametric UVs, so planks follow the hull); the outboard motor and propeller are signed distance functions meshed
 like Kai's parts (see kai_geometry.polygonize).
 """
-import math
+import math, os
 import numpy as np
 
 import kai_geometry as KG
 
-XS, XB = -105.0, 125.0          # stern (transom) and bow tip
+VARIANT = set(filter(None, os.environ.get("BOAT_VARIANT", "").split(",")))   # design experiments (A/B tests)
+XS, XB = -105.0, (80.0 if "short" in VARIANT else 125.0)          # stern (transom) and bow tip
 T = 3.2                         # hull planking thickness
 U_BULK = 0.80                   # the foredeck covers the hull forward of here
 FLOOR_Z = 7.0                   # top of the floorboards
@@ -49,7 +50,8 @@ def keel_z(x):
 
 def sheer_z(x):
     u = _u(x)
-    return np.where(u < 0.45, 35.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 35.0 + 20.0 * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
+    rise = 28.0 if "short" in VARIANT else 20.0
+    return np.where(u < 0.45, 35.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 35.0 + rise * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
 
 
 def _rake_amount(x):
@@ -314,7 +316,7 @@ def tube(path, radius, sides=12):
 
 def rub_rail():
     """Chunky rounded rail along the outside of the gunwale, all the way round the bow."""
-    xs = stations(XS + 0.5, XB - 1.0, 60, 1.4)
+    xs = stations(XS + 2.0, XB - 1.0, 60, 1.4)                  # the domed ends finish flush with the transom
     side = np.stack([xs, gunwale_w(xs) + 0.9, sheer_z(xs) - 1.6], -1)
     tip = np.array([[XB + 1.6, 0.0, float(sheer_z(XB)) - 1.6]])
     path = np.vstack([mirror(side), tip, side[::-1]])
@@ -344,7 +346,9 @@ def hull_pieces():
 # Outboard motor and propeller (signed distance functions, in the boat frame at rest, steering straight)
 # ---------------------------------------------------------------------------
 sd_e, sd_rc, sd_cap, smin, smax = KG.sd_ellipsoid, KG.sd_round_cone, KG.sd_capsule, KG.smin, KG.smax
-PROP_C = np.array([XS - 9.0, 0.0, -5.0])      # propeller hub centre
+SWIVEL_R = 2.2                                # swivel tube radius (turns inside the clamp's collars)
+LEG_X = MOTOR_PIVOT[0] - 10.5                # the outboard's leg, behind the steering axis (clear of the clamp's collars)
+PROP_C = np.array([LEG_X - 6.8, 0.0, -5.0])   # propeller hub centre, at the tail of the gearcase
 
 
 def sd_box(P, c, h, r=0.0):
@@ -361,11 +365,12 @@ def _motor_parts(P):
     cowl = sd_e(P, np.array([cx, 0, pv[2] + 15.5]), np.array([15.0, 11.5, 12.5]))
     cowl = smax(cowl, -(P[:, 2] - (pv[2] + 7.0)), 1.8)
     band = sd_box(P, np.array([cx + 0.5, 0, pv[2] + 5.5]), (13.0, 9.6, 4.0), 3.4)
-    leg = sd_cap(P, np.array([pv[0], 0, pv[2] + 1.0]), np.array([pv[0], 0, sheer_z(XS) - 9.0]), 2.5)      # swivel tube
-    leg = smin(leg, sd_rc(P, np.array([cx + 0.5, 0, pv[2] + 2.0]), np.array([cx + 1.5, 0, PROP_C[2] + 5.5]), 4.6, 3.6), 2.0)
-    leg = smin(leg, sd_e(P, np.array([cx + 1.0, 0, PROP_C[2] + 6.8]), np.array([10.0, 6.8, 0.9])), 1.0)  # cavitation plate
-    leg = smin(leg, sd_cap(P, np.array([cx + 7.5, 0, PROP_C[2]]), np.array([PROP_C[0] + 1.2, 0, PROP_C[2]]), 3.7), 1.6)
-    leg = smin(leg, sd_box(P, np.array([cx + 2.0, 0, PROP_C[2] - 6.5]), (4.2, 0.8, 4.2), 0.7), 1.0)     # skeg
+    leg = sd_cap(P, np.array([pv[0], 0, pv[2] + 1.0]), np.array([pv[0], 0, sheer_z(XS) - 9.0]), SWIVEL_R)  # swivel tube
+    leg = smin(leg, sd_rc(P, np.array([LEG_X + 1.0, 0, pv[2] + 3.0]), np.array([LEG_X, 0, PROP_C[2] + 3.0]), 4.4, 3.4), 2.0)
+    leg = smin(leg, sd_box(P, np.array([0.5 * (pv[0] + LEG_X), 0, pv[2] + 3.0]), (0.5 * (pv[0] - LEG_X) + 1.0, 2.0, 1.6), 1.2), 1.2)
+    leg = smin(leg, sd_e(P, np.array([LEG_X - 2.5, 0, PROP_C[2] + 10.3]), np.array([11.0, 7.0, 0.9])), 1.0)  # plate
+    leg = smin(leg, sd_rc(P, np.array([LEG_X + 5.5, 0, PROP_C[2]]), np.array([PROP_C[0] + 7.2, 0, PROP_C[2]]), 3.6, 2.2), 1.6)
+    leg = smin(leg, sd_box(P, np.array([LEG_X + 1.5, 0, PROP_C[2] - 6.0]), (3.5, 0.8, 3.6), 0.7), 1.0)     # skeg
     link = sd_rc(P, pv + np.array([2.0, 0, 6.2]), pv + np.array([9.5, 0, 5.6]), 1.7, 1.2)          # steering arm
     link = smin(link, sd_e(P, pv + np.array([10.2, 0, 5.6]), np.array([1.7, 1.7, 1.7])), 0.5)
     return dict(cowl=cowl, band=band, leg=leg, link=link)
@@ -389,7 +394,7 @@ def motor_part(P):
     return np.array([MOTOR_PAINT[n] for n in names])[near]
 
 
-MOTOR_BOX = ((XS - 26.0, MOTOR_PIVOT[0] + 14.0), (-14.0, 14.0), (PROP_C[2] - 13.0, MOTOR_PIVOT[2] + 30.0))
+MOTOR_BOX = ((XS - 38.0, MOTOR_PIVOT[0] + 14.0), (-14.0, 14.0), (PROP_C[2] - 13.0, MOTOR_PIVOT[2] + 30.0))
 
 
 # ---------------------------------------------------------------------------
@@ -405,10 +410,10 @@ def clamp_sdf(P):
     d = smin(d, sd_box(P, np.array([XS - 2.1, 0, zt - 1.5]), (1.1, 7.2, 7.5), 0.8), 0.8)            # outside plate
     d = smin(d, sd_box(P, np.array([XS + T + 1.1, 0, zt - 1.0]), (1.0, 7.2, 4.4), 0.7), 0.8)      # inside plate
     for z in (zt + 3.6, zt - 7.0):                                                                  # collars and arms
-        ring = np.maximum(np.abs(np.hypot(P[:, 0] - pv[0], P[:, 1]) - 3.8) - 1.1, np.abs(P[:, 2] - z) - 1.4)
+        ring = np.maximum(np.abs(np.hypot(P[:, 0] - pv[0], P[:, 1]) - (SWIVEL_R + 1.4)) - 0.8, np.abs(P[:, 2] - z) - 1.4)
         d = np.minimum(d, ring - 0.15)
         for s in (1, -1):
-            d = smin(d, sd_cap(P, np.array([XS - 2.2, 4.0 * s, z]), np.array([pv[0] + 2.4, 3.6 * s, z]), 1.2), 0.6)
+            d = smin(d, sd_cap(P, np.array([XS - 2.2, 4.0 * s, z]), np.array([pv[0] + 2.6, 3.2 * s, z]), 1.2), 0.6)
     for s in (1, -1):                                                                               # T-handle screws
         y = 4.2 * s; z = zt - 3.0
         d = np.minimum(d, sd_cap(P, np.array([XS + T + 1.5, y, z]), np.array([XS + T + 3.4, y, z]), 0.75))
@@ -447,10 +452,11 @@ BOW_LIGHT[2] = deck_z(BOW_LIGHT[0]) + 4.6
 WHEEL_C = np.array([-65.0, 0.0, 42.5])                  # hub centre
 WHEEL_FWD = np.array([0.91, 0.0, -0.41]) / np.linalg.norm([0.91, 0.0, -0.41])   # wheel axis, away from the driver
 WHEEL_UP = np.cross(WHEEL_FWD, [0.0, 1.0, 0.0])          # 12 o'clock on the wheel
-WHEEL_R, WHEEL_RIM = 8.2, 0.95                           # rim radius and thickness
+WHEEL_R, WHEEL_RIM = (9.5, 1.2) if "console" in VARIANT else (8.2, 0.95)   # rim radius and thickness
 WHEEL_MAX = 60.0                                         # degrees each way at full lock
 WHEEL_FRAME = np.column_stack([WHEEL_FWD, [0.0, 1.0, 0.0], WHEEL_UP])   # wheel's local axes in the boat frame
-CONSOLE = dict(x0=-55.0, x1=-43.0, half_w=10.0, top_back=40.0, top_front=44.5)
+CONSOLE = (dict(x0=-55.0, x1=-45.0, half_w=13.0, top_back=37.0, top_front=40.0, round=3.0) if "console" in VARIANT else
+           dict(x0=-55.0, x1=-43.0, half_w=10.0, top_back=40.0, top_front=44.5, round=1.6))
 
 
 def console_sdf(P):
@@ -458,7 +464,7 @@ def console_sdf(P):
     xm = 0.5 * (c["x0"] + c["x1"]); hx = 0.5 * (c["x1"] - c["x0"])
     zt = 0.5 * (c["top_back"] + c["top_front"])
     d = sd_box(P, np.array([xm, 0, 0.5 * (FLOOR_Z - 1.0 + c["top_front"])]),
-               (hx, c["half_w"], 0.5 * (c["top_front"] - FLOOR_Z + 1.0)), 1.6)
+               (hx, c["half_w"], 0.5 * (c["top_front"] - FLOOR_Z + 1.0)), c["round"])
     slope = (c["top_front"] - c["top_back"]) / (c["x1"] - c["x0"])
     n = np.array([-slope, 0, 1.0]) / math.hypot(slope, 1.0)                    # the sloping dash top
     d = smax(d, (P - np.array([xm, 0, zt])) @ n, 1.2)
@@ -475,7 +481,7 @@ def console_sdf(P):
     return d
 
 
-GAUGE_Z = 34.5
+GAUGE_Z = CONSOLE["top_back"] - 5.5
 THROTTLE_KNOB = np.array([CONSOLE["x0"] - 0.5, -CONSOLE["half_w"] - 1.8, CONSOLE["top_back"] + 8.5])
 CONSOLE_BOX = ((CONSOLE["x0"] - 8.0, CONSOLE["x1"] + 2.0), (-CONSOLE["half_w"] - 5.0, CONSOLE["half_w"] + 2.0),
                (FLOOR_Z - 1.5, CONSOLE["top_front"] + 12.0))
@@ -527,9 +533,9 @@ def prop_sdf(P):
         pitch = math.radians(28)
         n = np.cos(pitch) * np.array([1.0, 0, 0]) + np.sin(pitch) * t_dir        # blade face normal
         u = np.cross(n, r_dir)
-        c = PROP_C + r_dir * 5.0
+        c = PROP_C + r_dir * 4.6
         R = np.column_stack([u, r_dir, n])
-        blade = sd_e(P, c, np.array([3.1, 4.3, 0.55]), R)
+        blade = sd_e(P, c, np.array([3.0, 4.0, 0.55]), R)
         d = smin(d, blade, 0.8)
     return d
 
@@ -545,9 +551,12 @@ KAI_ROOT = np.array([-86.6, 0.0, FLOOR_Z])
 # mass (x = -14: the outboard and the driver sit aft; the guide offsets Unreal's centre of mass to match), so with equal
 # springs the boat floats level with every pontoon WATERLINE deep.
 DESIGN_COM = np.array([-14.0, 0.0, 13.4])
-PONTOONS = (("Pontoon_Bow", 86.0, 0.0), ("Pontoon_FL", 36.0, 34.0), ("Pontoon_FR", 36.0, -34.0),
-            ("Pontoon_ML", -34.0, 36.0), ("Pontoon_MR", -34.0, -36.0), ("Pontoon_SL", -94.0, 30.0),
-            ("Pontoon_SR", -94.0, -30.0))       # where Kai's root bone goes while driving (feet on the floorboards)
+PONTOONS = ((("Pontoon_Bow", 64.0, 0.0), ("Pontoon_FL", 40.0, 30.0), ("Pontoon_FR", 40.0, -30.0),
+             ("Pontoon_ML", -30.0, 36.0), ("Pontoon_MR", -30.0, -36.0), ("Pontoon_SL", -92.0, 30.0),
+             ("Pontoon_SR", -92.0, -30.0)) if "short" in VARIANT else
+            (("Pontoon_Bow", 86.0, 0.0), ("Pontoon_FL", 36.0, 34.0), ("Pontoon_FR", 36.0, -34.0),
+             ("Pontoon_ML", -34.0, 36.0), ("Pontoon_MR", -34.0, -36.0), ("Pontoon_SL", -94.0, 30.0),
+             ("Pontoon_SR", -94.0, -30.0)))       # where Kai's root bone goes while driving (feet on the floorboards)
 CAPSULE_HALF = 52.0                               # Kai's capsule half height (his guide: mesh Z -52)
 
 
@@ -567,7 +576,7 @@ def sockets():
         "Camera_Boom": (np.array([-40.0, 0, 70.0]), f, up),
         "Bow_Spray_L": (np.array([70.0, 46.0, zw + 2]), f, up),
         "Bow_Spray_R": (np.array([70.0, -46.0, zw + 2]), f, up),
-        "Wake": (np.array([XS - 9.0, 0, zw]), -f, up),
+        "Wake": (np.array([PROP_C[0] - 4.0, 0, zw]), -f, up),
         "Bow_Light": (rake(BOW_LIGHT), f, up),
     }
     for name, x, y in PONTOONS:
@@ -578,4 +587,4 @@ def sockets():
 def motor_sockets():
     f, up = np.array([1.0, 0, 0]), np.array([0, 0, 1.0])
     return {"Propeller": (PROP_C, f, up),
-            "Exhaust": (MOTOR_PIVOT + np.array([-14.0, 0, 6.0]), -f, up)}
+            "Exhaust": (MOTOR_PIVOT + np.array([-20.0, 0, 9.0]), -f, up)}
