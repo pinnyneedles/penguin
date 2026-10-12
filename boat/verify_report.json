@@ -1,0 +1,176 @@
+{
+  "ok": true,
+  "failures": [],
+  "files": {
+    "SM_Boat_Hull": {
+      "file": "SM_Boat_Hull.fbx",
+      "size_mb": 1.24,
+      "triangles": 16875,
+      "bounds_cm": [
+        [
+          -116.8,
+          -59.5,
+          0.0
+        ],
+        [
+          144.0,
+          59.5,
+          58.3
+        ]
+      ],
+      "materials": [
+        "M_Boat_Hull"
+      ],
+      "collision": 22,
+      "sockets": [
+        "Board_Stand",
+        "Bow_Light",
+        "Bow_Spray_L",
+        "Bow_Spray_R",
+        "Camera_Boom",
+        "Driver_Root",
+        "Exit_Port",
+        "Exit_Starboard",
+        "Motor_Mount",
+        "Pontoon_Bow",
+        "Pontoon_FL",
+        "Pontoon_FR",
+        "Pontoon_ML",
+        "Pontoon_MR",
+        "Pontoon_SL",
+        "Pontoon_SR",
+        "Seat_Driver",
+        "Seat_Passenger",
+        "Throttle",
+        "Wake",
+        "Wheel"
+      ],
+      "socket_max_error_cm": 0.0
+    },
+    "SM_Boat_Motor": {
+      "file": "SM_Boat_Motor.fbx",
+      "size_mb": 0.45,
+      "triangles": 6000,
+      "bounds_cm": [
+        [
+          -18.9,
+          -11.5,
+          -57.7
+        ],
+        [
+          11.9,
+          11.5,
+          28.0
+        ]
+      ],
+      "materials": [
+        "M_Boat_Motor"
+      ],
+      "volume_cm3": 14239.7,
+      "collision": 2,
+      "sockets": [
+        "Exhaust",
+        "Propeller"
+      ],
+      "socket_max_error_cm": 0.0
+    },
+    "SM_Boat_Propeller": {
+      "file": "SM_Boat_Propeller.fbx",
+      "size_mb": 0.14,
+      "triangles": 1600,
+      "bounds_cm": [
+        [
+          -4.6,
+          -5.7,
+          -8.3
+        ],
+        [
+          4.2,
+          9.3,
+          8.3
+        ]
+      ],
+      "centroid_cm": [
+        -0.064,
+        -0.0,
+        -0.0
+      ],
+      "materials": [
+        "M_Boat_Propeller"
+      ],
+      "volume_cm3": 183.9,
+      "collision": 0,
+      "sockets": [],
+      "socket_max_error_cm": 0.0
+    },
+    "SM_Boat_Wheel": {
+      "file": "SM_Boat_Wheel.fbx",
+      "size_mb": 0.21,
+      "triangles": 2400,
+      "bounds_cm": [
+        [
+          -3.1,
+          -9.2,
+          -9.2
+        ],
+        [
+          3.2,
+          9.1,
+          9.1
+        ]
+      ],
+      "materials": [
+        "M_Boat_Wheel"
+      ],
+      "volume_cm3": 245.5,
+      "collision": 0,
+      "sockets": [],
+      "socket_max_error_cm": 0.0
+    },
+    "AN_Kai_Boat_Steer_Left": {
+      "file": "AN_Kai_Boat_Steer_Left.fbx",
+      "size_mb": 0.506,
+      "pose_max_error_cm": 0.0002,
+      "frames": [
+        2.0,
+        3.0
+      ]
+    },
+    "AN_Kai_Boat_Steer_Left_Half": {
+      "file": "AN_Kai_Boat_Steer_Left_Half.fbx",
+      "size_mb": 0.506,
+      "pose_max_error_cm": 0.0002,
+      "frames": [
+        2.0,
+        3.0
+      ]
+    },
+    "AN_Kai_Boat_Drive": {
+      "file": "AN_Kai_Boat_Drive.fbx",
+      "size_mb": 0.506,
+      "pose_max_error_cm": 0.0002,
+      "frames": [
+        2.0,
+        3.0
+      ]
+    },
+    "AN_Kai_Boat_Steer_Right_Half": {
+      "file": "AN_Kai_Boat_Steer_Right_Half.fbx",
+      "size_mb": 0.506,
+      "pose_max_error_cm": 0.0002,
+      "frames": [
+        2.0,
+        3.0
+      ]
+    },
+    "AN_Kai_Boat_Steer_Right": {
+      "file": "AN_Kai_Boat_Steer_Right.fbx",
+      "size_mb": 0.506,
+      "pose_max_error_cm": 0.0002,
+      "frames": [
+        2.0,
+        3.0
+      ]
+    }
+  }
+}

@@ -232,6 +232,40 @@ thighs toward the hem, so running, jumping, crouch landings, knee lifts to 70°,
 | `tools/kai_clearance.py`, `tools/kai_pose_check.py`, `tools/verify_kai.py` | Clipping at rest, clipping in leg poses, exported-file checks |
 | `tools/package_kai_unreal.py` | Builds `dist/Kai_Unreal.zip` |
 
+## Kai's boat (drivable toon motorboat)
+
+**Download for Unreal:** [`dist/Boat_Unreal.zip`](dist/Boat_Unreal.zip) has the boat as four static meshes with
+collision and sockets built in, five driving poses for Kai, textures, reference data, previews and the Blender sources.
+Its `IMPORT_GUIDE.html` walks through importing into Unreal Engine 5 and building `BP_KaiBoat`, a Blueprint Pawn that
+floats, drives and steers with physics and that Kai gets in and out of. The guide's source is `boat/IMPORT_GUIDE.md`,
+and `python3 tools/package_boat_unreal.py` rebuilds the zip (it runs the pose, physics and FBX checks first).
+
+`boat/` is a 2.6 m cream-and-red wooden skiff with a navy rub rail, a retro red outboard motor and a small helm console
+with a steering wheel and throttle. Kai sits on the stern seat with both hands on the wheel.
+
+![Kai driving his boat](boat/Preview_Kai_Driving.png)
+
+**Built for Unreal.**
+- **Meshes and collision.** Hull, motor, propeller and wheel are separate meshes, so the wheel turns, the outboard
+  swings and the propeller spins. The hull carries 22 convex collision pieces, which let Kai walk on the floorboards,
+  and 21 sockets: seat, exit points, motor and wheel mounts, camera boom, seven buoyancy points, and spray, wake and
+  bow-light effects.
+- **Driving poses.** Kai's five poses (full and half lock each way, and straight ahead) were fitted to the boat: his
+  fists close on the rim, his feet rest on the floorboards and his clothes stay clear. He leans and looks into turns.
+- **Physics.** The guide's buoyancy, thrust and drag values come from a simulation of the same forces
+  (`tools/boat_sim.py`). The boat floats level on its waterline, reaches 27 km/h, turns a 7.6 m circle and glides to a
+  stop, the same at 30, 60 and 120 fps.
+
+| Script | What it does |
+|---|---|
+| `tools/boat_geometry.py` | Hull, fittings, console, wheel, motor and propeller shapes; sockets and pontoons |
+| `tools/boat_textures.py` | Colours and painted details |
+| `tools/build_boat.py` | Meshes, textures, collision, sockets, FBX export (`--out boat`) |
+| `tools/kai_boat_pose.py` | Seats Kai, fits his grip to the wheel, checks clearances, exports the driving poses |
+| `tools/boat_sim.py` | Physics simulation behind the Blueprint tuning values |
+| `tools/render_boat.py`, `tools/verify_boat.py` | Preview renders and exported-file checks |
+| `tools/package_boat_unreal.py` | Builds `dist/Boat_Unreal.zip` |
+
 ## Crab (rigged enemy)
 
 **Download for Unreal:** [`dist/Crab_Unreal.zip`](dist/Crab_Unreal.zip) has the skeletal mesh with three lower levels

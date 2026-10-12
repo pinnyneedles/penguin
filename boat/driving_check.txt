@@ -1,0 +1,11 @@
+fist {'L': ([0.03, 1.55, -2.5], 4.0, -0.2), 'R': ([-0.03, 2.9, -2.35], 20.0, -0.22)}
+AN_Kai_Boat_Steer_Left {"grip_L_error_cm": 0.0, "grip_R_error_cm": 0.0, "foot_l_error_cm": 0.0, "foot_r_error_cm": 0.0, "sole_above_floor_cm": 0.03, "seat_gap_cm": 0.12, "rim_depth_cm": 0.25, "cloth_overlaps": {"Tunic/Pants": 0, "Sash/Pants": 0, "Tunic/Legs": 0}, "bake_error_cm": 0.0002}
+AN_Kai_Boat_Steer_Left_Half {"grip_L_error_cm": 0.0, "grip_R_error_cm": 0.0, "foot_l_error_cm": 0.0, "foot_r_error_cm": 0.0, "sole_above_floor_cm": 0.03, "seat_gap_cm": 0.12, "rim_depth_cm": 0.31, "cloth_overlaps": {"Tunic/Pants": 0, "Sash/Pants": 0, "Tunic/Legs": 0}, "bake_error_cm": 0.0002}
+AN_Kai_Boat_Drive {"grip_L_error_cm": 0.0, "grip_R_error_cm": 0.0, "foot_l_error_cm": 0.0, "foot_r_error_cm": 0.0, "sole_above_floor_cm": 0.03, "seat_gap_cm": 0.12, "rim_depth_cm": 0.29, "cloth_overlaps": {"Tunic/Pants": 0, "Sash/Pants": 0, "Tunic/Legs": 0}, "bake_error_cm": 0.0002}
+AN_Kai_Boat_Steer_Right_Half {"grip_L_error_cm": 0.0, "grip_R_error_cm": 0.0, "foot_l_error_cm": 0.0, "foot_r_error_cm": 0.0, "sole_above_floor_cm": 0.03, "seat_gap_cm": 0.12, "rim_depth_cm": 0.22, "cloth_overlaps": {"Tunic/Pants": 0, "Sash/Pants": 0, "Tunic/Legs": 0}, "bake_error_cm": 0.0002}
+AN_Kai_Boat_Steer_Right {"grip_L_error_cm": 0.0, "grip_R_error_cm": 0.0, "foot_l_error_cm": 0.0, "foot_r_error_cm": 0.0, "sole_above_floor_cm": 0.03, "seat_gap_cm": 0.12, "rim_depth_cm": 0.22, "cloth_overlaps": {"Tunic/Pants": 0, "Sash/Pants": 0, "Tunic/Legs": 0}, "bake_error_cm": 0.0002}
+blend L LH {'grip_error_cm': 0.32, 'rim_depth_cm': 0.59}
+blend LH C {'grip_error_cm': 0.29, 'rim_depth_cm': 0.59}
+blend C RH {'grip_error_cm': 0.28, 'rim_depth_cm': 0.51}
+blend RH R {'grip_error_cm': 0.31, 'rim_depth_cm': 0.52}
+ DRIVING_OK

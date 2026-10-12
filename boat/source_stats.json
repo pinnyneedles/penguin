@@ -1,0 +1,113 @@
+{
+  "meshes": {
+    "SM_Boat_Hull": {
+      "vertices": 8844,
+      "triangles": 16875,
+      "texture": "T_Boat_Hull_BaseColor",
+      "texture_size": 2048,
+      "collision": [
+        "UCX_SM_Boat_Hull_00",
+        "UCX_SM_Boat_Hull_01",
+        "UCX_SM_Boat_Hull_02",
+        "UCX_SM_Boat_Hull_03",
+        "UCX_SM_Boat_Hull_04",
+        "UCX_SM_Boat_Hull_05",
+        "UCX_SM_Boat_Hull_06",
+        "UCX_SM_Boat_Hull_07",
+        "UCX_SM_Boat_Hull_08",
+        "UCX_SM_Boat_Hull_09",
+        "UCX_SM_Boat_Hull_10",
+        "UCX_SM_Boat_Hull_11",
+        "UCX_SM_Boat_Hull_12",
+        "UCX_SM_Boat_Hull_13",
+        "UCX_SM_Boat_Hull_14",
+        "UCX_SM_Boat_Hull_15",
+        "UCX_SM_Boat_Hull_16",
+        "UCX_SM_Boat_Hull_17",
+        "UCX_SM_Boat_Hull_18",
+        "UCX_SM_Boat_Hull_19",
+        "UCX_SM_Boat_Hull_20",
+        "UCX_SM_Boat_Hull_21"
+      ],
+      "sockets": [
+        "Board_Stand",
+        "Bow_Light",
+        "Bow_Spray_L",
+        "Bow_Spray_R",
+        "Camera_Boom",
+        "Driver_Root",
+        "Exit_Port",
+        "Exit_Starboard",
+        "Motor_Mount",
+        "Pontoon_Bow",
+        "Pontoon_FL",
+        "Pontoon_FR",
+        "Pontoon_ML",
+        "Pontoon_MR",
+        "Pontoon_SL",
+        "Pontoon_SR",
+        "Seat_Driver",
+        "Seat_Passenger",
+        "Throttle",
+        "Wake",
+        "Wheel"
+      ]
+    },
+    "SM_Boat_Motor": {
+      "vertices": 3002,
+      "triangles": 6000,
+      "texture": "T_Boat_Motor_BaseColor",
+      "texture_size": 1024,
+      "collision": [
+        "UCX_SM_Boat_Motor_00",
+        "UCX_SM_Boat_Motor_01"
+      ],
+      "sockets": [
+        "Exhaust",
+        "Propeller"
+      ]
+    },
+    "SM_Boat_Propeller": {
+      "vertices": 802,
+      "triangles": 1600,
+      "texture": "T_Boat_Propeller_BaseColor",
+      "texture_size": 256,
+      "collision": [],
+      "sockets": []
+    },
+    "SM_Boat_Wheel": {
+      "vertices": 1196,
+      "triangles": 2400,
+      "texture": "T_Boat_Wheel_BaseColor",
+      "texture_size": 512,
+      "collision": [],
+      "sockets": []
+    }
+  },
+  "length_cm": 231.6,
+  "beam_cm": 119.0,
+  "motor_pivot_cm": [
+    -112.0,
+    0.0,
+    42.0
+  ],
+  "propeller_cm": [
+    -114.0,
+    0.0,
+    -5.0
+  ],
+  "steer_max_deg": 25.0,
+  "wheel_cm": [
+    -65.0,
+    0.0,
+    42.5
+  ],
+  "wheel_max_deg": 60.0,
+  "waterline_cm": 5.0,
+  "floor_cm": 7.0,
+  "kai_root_cm": [
+    -86.6,
+    0.0,
+    7.0
+  ]
+}

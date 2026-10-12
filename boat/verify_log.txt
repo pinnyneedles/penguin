@@ -1,0 +1,10 @@
+SM_Boat_Hull         tris  16875  collision 22  sockets 21  bounds [[-116.8, -59.5, 0.0], [144.0, 59.5, 58.3]]
+SM_Boat_Motor        tris   6000  collision  2  sockets  2  bounds [[-18.9, -11.5, -57.7], [11.9, 11.5, 28.0]]
+SM_Boat_Propeller    tris   1600  collision  0  sockets  0  bounds [[-4.6, -5.7, -8.3], [4.2, 9.3, 8.3]]
+SM_Boat_Wheel        tris   2400  collision  0  sockets  0  bounds [[-3.1, -9.2, -9.2], [3.2, 9.1, 9.1]]
+AN_Kai_Boat_Steer_Left     bones 85  pose error 0.0002 cm
+AN_Kai_Boat_Steer_Left_Half bones 85  pose error 0.0002 cm
+AN_Kai_Boat_Drive          bones 85  pose error 0.0002 cm
+AN_Kai_Boat_Steer_Right_Half bones 85  pose error 0.0002 cm
+AN_Kai_Boat_Steer_Right    bones 85  pose error 0.0002 cm
+ VERIFY_OK
