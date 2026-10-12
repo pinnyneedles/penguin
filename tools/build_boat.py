@@ -29,7 +29,7 @@ T0 = time.time()
 
 # mesh: (marching-cubes spacing (cm), triangle budget, texture size)
 SPEC = {"SM_Boat_Hull": (None, None, 2048), "SM_Boat_Motor": (0.3, 6000, 1024), "SM_Boat_Propeller": (0.12, 1600, 256),
-        "SM_Boat_Wheel": (0.1, 2400, 512)}
+        "SM_Boat_Wheel": (0.1, 4000, 512)}
 if DRAFT:
     SPEC = {k: (h and h * 1.6, n and n // 2, max(256, t // 2)) for k, (h, n, t) in SPEC.items()}
 

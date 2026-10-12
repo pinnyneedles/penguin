@@ -1,7 +1,7 @@
 # Kai's boat: import into Unreal Engine 5 and drive it
 
-A small toon motorboat for Kai: a cream-and-red wooden skiff with a navy rub rail, a retro red outboard motor, and a
-little helm console with a steering wheel and throttle. Kai climbs in, sits at the wheel and drives. He leans and looks
+A small toon motorboat for Kai: a short, chubby cream-and-red wooden skiff with a navy rub rail, a retro red outboard
+motor, and a little rounded helm console with a cream steering wheel and a throttle. Kai climbs in, sits at the wheel and drives. He leans and looks
 into turns, the wheel turns, the outboard swings and the propeller spins. The boat floats, bobs, turns, coasts to a
 stop and carries Kai with it.
 
@@ -38,13 +38,13 @@ Plan on about an hour the first time. You need Kai imported first (`Kai_Unreal.z
 
 | | |
 |---|---|
-| Size | 2.6 m long, 1.2 m wide, sides 35 to 55 cm high; Kai (103 cm) sits at the wheel near the stern |
+| Size | 2.0 m long, 1.2 m wide, sides 35 to 63 cm high; Kai (103 cm) sits at the wheel near the stern |
 | Hull origin | On the centreline at the bottom of the keel, amidships. The bow points along +X, the actor's forward. |
 | Floats at | 5 cm up the keel (the design waterline, just below the red-and-navy stripe), with the floorboards dry |
 | Motor | Origin on its steering axis. Turn it about Z (yaw) to steer, up to 25° each way. |
 | Propeller | Origin at the hub. Spin it about X (roll). |
 | Wheel | Origin at the hub, X along the steering column. Turn it about X (roll), up to 60° each way. |
-| Triangles | Hull 16,875 · motor 6,000 · propeller 1,600 · wheel 2,400 |
+| Triangles | Hull 17,189 · motor 6,000 · propeller 1,600 · wheel 4,000 |
 
 **Sockets on the hull** (positions in `Reference/sockets.csv`):
 
@@ -90,7 +90,7 @@ Plan on about an hour the first time. You need Kai imported first (`Kai_Unreal.z
     - Miscellaneous: **Convert Scene** on, **Convert Scene Unit** on, **Force Front XAxis** off.
 
 4. **Check it.** Open `SM_Boat_Hull`:
-    - It should be 2.6 m long with the bow pointing along the red X arrow. If it is 100 times too big or too small,
+    - It should be 2.0 m long with the bow pointing along the red X arrow. If it is 100 times too big or too small,
       re-import with scale 1.0 and Convert Scene Unit on.
     - **Show → Simple Collision** should show 22 green shapes: the bottom, the sides, the solid bow, the transom, the
       seats and the console. If you see one blob around the whole boat, collision was auto-generated. Re-import with
@@ -198,7 +198,7 @@ pitch.
 | Physics → Linear Damping | 0.05 |
 | Physics → Angular Damping | 1.2 |
 | Physics → Enable Gravity | on |
-| Physics (advanced) → Center Of Mass Offset | X −25.3, Y 0, Z −8 (moves the centre of mass aft and down, to where the outboard and driver put it) |
+| Physics (advanced) → Center Of Mass Offset | X −5.3, Y 0, Z −9.5 (moves the centre of mass aft and down, to where the outboard and driver put it) |
 | Collision → Collision Presets | PhysicsActor |
 
 **Motor, Propeller and Wheel:** Collision Presets **NoCollision** (they must not add mass or push the hull),
@@ -413,11 +413,11 @@ The Blueprint above works on any flat water at `WaterHeight`. With the Water plu
 | Floats at | 5.0 cm up the keel, level (0.0° pitch and roll) |
 | Settles after a 10 cm drop | 0.7 s |
 | Top speed | 7.45 m/s (27 km/h), 90% of it in 3.8 s |
-| Full lock at full throttle | 47°/s, a 7.6 m turning circle at 6.2 m/s, 1° of heel |
+| Full lock at full throttle | 59°/s, a 5.7 m turning circle at 5.9 m/s, 1° of heel |
 | Coasting from top speed to 0.5 m/s | 5.9 s |
 | Reverse | 3.0 m/s |
 | Righting from 20° of heel | upright within 2 s |
-| 4 cm swell | the boat rides it, bobbing 6.4 cm and pitching 4.4° |
+| 4 cm swell | the boat rides it, bobbing 6.8 cm and pitching 4.5° |
 
 ## Troubleshooting
 

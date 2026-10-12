@@ -1,8 +1,8 @@
 {
   "meshes": {
     "SM_Boat_Hull": {
-      "vertices": 8844,
-      "triangles": 16875,
+      "vertices": 9001,
+      "triangles": 17189,
       "texture": "T_Boat_Hull_BaseColor",
       "texture_size": 2048,
       "collision": [
@@ -76,15 +76,15 @@
       "sockets": []
     },
     "SM_Boat_Wheel": {
-      "vertices": 1196,
-      "triangles": 2400,
+      "vertices": 1996,
+      "triangles": 4000,
       "texture": "T_Boat_Wheel_BaseColor",
       "texture_size": 512,
       "collision": [],
       "sockets": []
     }
   },
-  "length_cm": 231.6,
+  "length_cm": 186.6,
   "beam_cm": 119.0,
   "motor_pivot_cm": [
     -112.0,
@@ -92,7 +92,7 @@
     42.0
   ],
   "propeller_cm": [
-    -114.0,
+    -129.3,
     0.0,
     -5.0
   ],
@@ -109,5 +109,11 @@
     -86.6,
     0.0,
     7.0
-  ]
+  ],
+  "moving_part_overlaps": {
+    "motor_vs_hull_yaw_-25": 0,
+    "motor_vs_hull_yaw_+0": 0,
+    "motor_vs_hull_yaw_+25": 0,
+    "propeller_vs_motor_spinning": 0
+  }
 }

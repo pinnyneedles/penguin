@@ -5,13 +5,12 @@ centreline, at the bottom of the keel amidships. The hull is built from parametr
 parametric UVs, so planks follow the hull); the outboard motor and propeller are signed distance functions meshed
 like Kai's parts (see kai_geometry.polygonize).
 """
-import math, os
+import math
 import numpy as np
 
 import kai_geometry as KG
 
-VARIANT = set(filter(None, os.environ.get("BOAT_VARIANT", "").split(",")))   # design experiments (A/B tests)
-XS, XB = -105.0, (80.0 if "short" in VARIANT else 125.0)          # stern (transom) and bow tip
+XS, XB = -105.0, 80.0           # stern (transom) and bow tip: a short, chubby toon skiff
 T = 3.2                         # hull planking thickness
 U_BULK = 0.80                   # the foredeck covers the hull forward of here
 FLOOR_Z = 7.0                   # top of the floorboards
@@ -50,8 +49,7 @@ def keel_z(x):
 
 def sheer_z(x):
     u = _u(x)
-    rise = 28.0 if "short" in VARIANT else 20.0
-    return np.where(u < 0.45, 35.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 35.0 + rise * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
+    return np.where(u < 0.45, 35.0 + 2.0 * ((0.45 - u) / 0.45) ** 2, 35.0 + 28.0 * (np.clip(u - 0.45, 0, None) / 0.55) ** 2.2)
 
 
 def _rake_amount(x):
@@ -251,10 +249,10 @@ def bulkhead():
     return Mesh("bulkhead").add(*fan(ring, center, True))
 
 
-def inner_halfwidth_at(x, z):
-    """Inner half-width of the hull at station x and height z."""
+def inner_halfwidth_at(x, z, inner=True):
+    """Inner (or outer) half-width of the hull at station x and height z."""
     phis = np.linspace(0, np.pi / 2, 400)
-    S = section(np.full_like(phis, x), phis, inner=True)
+    S = section(np.full_like(phis, x), phis, inner=inner)
     i = int(np.clip(np.searchsorted(S[:, 2], z), 1, len(S) - 1))
     a, b = S[i - 1], S[i]
     t = (z - a[2]) / max(b[2] - a[2], 1e-9)
@@ -452,11 +450,10 @@ BOW_LIGHT[2] = deck_z(BOW_LIGHT[0]) + 4.6
 WHEEL_C = np.array([-65.0, 0.0, 42.5])                  # hub centre
 WHEEL_FWD = np.array([0.91, 0.0, -0.41]) / np.linalg.norm([0.91, 0.0, -0.41])   # wheel axis, away from the driver
 WHEEL_UP = np.cross(WHEEL_FWD, [0.0, 1.0, 0.0])          # 12 o'clock on the wheel
-WHEEL_R, WHEEL_RIM = (9.5, 1.2) if "console" in VARIANT else (8.2, 0.95)   # rim radius and thickness
+WHEEL_R, WHEEL_RIM = 9.5, 0.9                            # rim radius and thickness
 WHEEL_MAX = 60.0                                         # degrees each way at full lock
 WHEEL_FRAME = np.column_stack([WHEEL_FWD, [0.0, 1.0, 0.0], WHEEL_UP])   # wheel's local axes in the boat frame
-CONSOLE = (dict(x0=-55.0, x1=-45.0, half_w=13.0, top_back=37.0, top_front=40.0, round=3.0) if "console" in VARIANT else
-           dict(x0=-55.0, x1=-43.0, half_w=10.0, top_back=40.0, top_front=44.5, round=1.6))
+CONSOLE = dict(x0=-55.0, x1=-45.0, half_w=13.0, top_back=37.0, top_front=40.0, round=3.0)   # low, wide and rounded
 
 
 def console_sdf(P):
@@ -551,13 +548,14 @@ KAI_ROOT = np.array([-86.6, 0.0, FLOOR_Z])
 # mass (x = -14: the outboard and the driver sit aft; the guide offsets Unreal's centre of mass to match), so with equal
 # springs the boat floats level with every pontoon WATERLINE deep.
 DESIGN_COM = np.array([-14.0, 0.0, 13.4])
-PONTOONS = ((("Pontoon_Bow", 64.0, 0.0), ("Pontoon_FL", 40.0, 30.0), ("Pontoon_FR", 40.0, -30.0),
-             ("Pontoon_ML", -30.0, 36.0), ("Pontoon_MR", -30.0, -36.0), ("Pontoon_SL", -92.0, 30.0),
-             ("Pontoon_SR", -92.0, -30.0)) if "short" in VARIANT else
-            (("Pontoon_Bow", 86.0, 0.0), ("Pontoon_FL", 36.0, 34.0), ("Pontoon_FR", 36.0, -34.0),
-             ("Pontoon_ML", -34.0, 36.0), ("Pontoon_MR", -34.0, -36.0), ("Pontoon_SL", -94.0, 30.0),
-             ("Pontoon_SR", -94.0, -30.0)))       # where Kai's root bone goes while driving (feet on the floorboards)
+PONTOONS = (("Pontoon_Bow", 64.0, 0.0), ("Pontoon_FL", 40.0, 30.0), ("Pontoon_FR", 40.0, -30.0),
+            ("Pontoon_ML", -30.0, 36.0), ("Pontoon_MR", -30.0, -36.0), ("Pontoon_SL", -92.0, 30.0),
+            ("Pontoon_SR", -92.0, -30.0))       # where Kai's root bone goes while driving (feet on the floorboards)
 CAPSULE_HALF = 52.0                               # Kai's capsule half height (his guide: mesh Z -52)
+
+
+_xs = XS + 0.72 * (XB - XS)
+SPRAY = rake(np.array([_xs, inner_halfwidth_at(_xs, WATERLINE + 2.0, inner=False) + 0.5, WATERLINE + 2.0]))  # bow spray, port
 
 
 def sockets():
@@ -574,8 +572,8 @@ def sockets():
         "Wheel": (WHEEL_C, WHEEL_FWD, WHEEL_UP),
         "Throttle": (THROTTLE_KNOB, f, up),
         "Camera_Boom": (np.array([-40.0, 0, 70.0]), f, up),
-        "Bow_Spray_L": (np.array([70.0, 46.0, zw + 2]), f, up),
-        "Bow_Spray_R": (np.array([70.0, -46.0, zw + 2]), f, up),
+        "Bow_Spray_L": (SPRAY, f, up),
+        "Bow_Spray_R": (mirror(SPRAY), f, up),
         "Wake": (np.array([PROP_C[0] - 4.0, 0, zw]), -f, up),
         "Bow_Light": (rake(BOW_LIGHT), f, up),
     }

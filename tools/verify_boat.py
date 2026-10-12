@@ -86,7 +86,8 @@ for name, exp in EXPECT.items():
     if name == "SM_Boat_Wheel":                              # the rim runs round the local X axis through the origin
         rad = np.hypot(V[:, 1], V[:, 2])
         check(abs(rad.max() - (B.WHEEL_R + B.WHEEL_RIM)) < 0.3 and np.abs(V[:, 0]).max() < 3.5,
-              f"{name}: rim not round the X axis through the origin")
+              f"{name}: rim not round the X axis through the origin (outer radius {rad.max():.2f}, "
+              f"expected {B.WHEEL_R + B.WHEEL_RIM:.2f}; |x| up to {np.abs(V[:, 0]).max():.2f})")
     # material and texture
     mats = [m for m in me.materials if m]
     r["materials"] = [m.name for m in mats]

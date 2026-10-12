@@ -240,8 +240,8 @@ Its `IMPORT_GUIDE.html` walks through importing into Unreal Engine 5 and buildin
 floats, drives and steers with physics and that Kai gets in and out of. The guide's source is `boat/IMPORT_GUIDE.md`,
 and `python3 tools/package_boat_unreal.py` rebuilds the zip (it runs the pose, physics and FBX checks first).
 
-`boat/` is a 2.6 m cream-and-red wooden skiff with a navy rub rail, a retro red outboard motor and a small helm console
-with a steering wheel and throttle. Kai sits on the stern seat with both hands on the wheel.
+`boat/` is a short, chubby 2 m cream-and-red wooden skiff with a navy rub rail, a retro red outboard motor and a small
+rounded helm console with a steering wheel and throttle. Kai sits on the stern seat with both hands on the wheel.
 
 ![Kai driving his boat](boat/Preview_Kai_Driving.png)
 
@@ -253,7 +253,7 @@ with a steering wheel and throttle. Kai sits on the stern seat with both hands o
 - **Driving poses.** Kai's five poses (full and half lock each way, and straight ahead) were fitted to the boat: his
   fists close on the rim, his feet rest on the floorboards and his clothes stay clear. He leans and looks into turns.
 - **Physics.** The guide's buoyancy, thrust and drag values come from a simulation of the same forces
-  (`tools/boat_sim.py`). The boat floats level on its waterline, reaches 27 km/h, turns a 7.6 m circle and glides to a
+  (`tools/boat_sim.py`). The boat floats level on its waterline, reaches 27 km/h, turns a 5.7 m circle and glides to a
   stop, the same at 30, 60 and 120 fps.
 
 | Script | What it does |

@@ -9,9 +9,9 @@
   "buoy_damping": 270.0,
   "buoy_max_depth": 40.0,
   "com_offset_cm": [
-   -25.3,
+   -5.3,
    -0.0,
-   -8.0
+   -9.5
   ],
   "thrust": 67000.0,
   "reverse_scale": 0.35,
@@ -26,9 +26,9 @@
  "design_waterline_cm": 5.0,
  "mass_properties": {
   "auto_centre_of_mass_cm": [
-   11.31,
-   0.05,
-   21.41
+   -8.67,
+   0.04,
+   22.89
   ],
   "centre_of_mass_cm": [
    -14.0,
@@ -36,111 +36,111 @@
    13.4
   ],
   "inertia_kg_cm2": [
-   144201.0,
-   802036.0,
-   897402.0
+   144376.0,
+   554731.0,
+   640009.0
   ]
  },
  "pontoons": {
   "Pontoon_Bow": [
-   86.0,
+   64.0,
    0.0,
    0.0
   ],
   "Pontoon_FL": [
-   36.0,
-   34.0,
+   40.0,
+   30.0,
    0.0
   ],
   "Pontoon_FR": [
-   36.0,
-   -34.0,
+   40.0,
+   -30.0,
    0.0
   ],
   "Pontoon_ML": [
-   -34.0,
+   -30.0,
    36.0,
    0.0
   ],
   "Pontoon_MR": [
-   -34.0,
+   -30.0,
    -36.0,
    0.0
   ],
   "Pontoon_SL": [
-   -94.0,
+   -92.0,
    30.0,
    0.0
   ],
   "Pontoon_SR": [
-   -94.0,
+   -92.0,
    -30.0,
    0.0
   ]
  },
  "results": {
   "30fps": {
-   "waterline_cm": 5.0,
-   "rest_pitch_deg": -0.0,
-   "rest_roll_deg": 0.0,
+   "waterline_cm": 5.01,
+   "rest_pitch_deg": 0.02,
+   "rest_roll_deg": -0.0,
    "settle_s": 0.67,
    "drop_overshoot_cm": 2.37,
    "top_speed_cm_s": 745.4,
    "to_90pct_s": 3.73,
-   "squat_pitch_deg": -0.6,
-   "running_waterline_cm": 4.85,
-   "turn_yaw_rate_deg_s": -46.3,
-   "turn_radius_cm": 775.0,
-   "turn_speed_cm_s": 626.4,
-   "turn_heel_deg": 1.0,
+   "squat_pitch_deg": -0.67,
+   "running_waterline_cm": 4.83,
+   "turn_yaw_rate_deg_s": -58.8,
+   "turn_radius_cm": 582.0,
+   "turn_speed_cm_s": 596.5,
+   "turn_heel_deg": 1.04,
    "turns_right": true,
    "coast_to_50_s": 5.83,
    "reverse_speed_cm_s": 304.4,
    "righting_roll_after_2s_deg": 0.0,
-   "swell_bob_cm": 6.41,
-   "swell_pitch_deg": 4.39
+   "swell_bob_cm": 6.73,
+   "swell_pitch_deg": 4.5
   },
   "60fps": {
-   "waterline_cm": 5.0,
-   "rest_pitch_deg": 0.0,
-   "rest_roll_deg": -0.0,
+   "waterline_cm": 5.01,
+   "rest_pitch_deg": 0.02,
+   "rest_roll_deg": 0.0,
    "settle_s": 0.7,
    "drop_overshoot_cm": 3.87,
    "top_speed_cm_s": 745.4,
    "to_90pct_s": 3.77,
-   "squat_pitch_deg": -0.6,
-   "running_waterline_cm": 4.85,
-   "turn_yaw_rate_deg_s": -46.6,
-   "turn_radius_cm": 764.0,
-   "turn_speed_cm_s": 621.6,
-   "turn_heel_deg": 1.0,
+   "squat_pitch_deg": -0.67,
+   "running_waterline_cm": 4.83,
+   "turn_yaw_rate_deg_s": -59.1,
+   "turn_radius_cm": 572.0,
+   "turn_speed_cm_s": 589.5,
+   "turn_heel_deg": 1.04,
    "turns_right": true,
    "coast_to_50_s": 5.85,
    "reverse_speed_cm_s": 304.4,
    "righting_roll_after_2s_deg": 0.0,
-   "swell_bob_cm": 6.44,
-   "swell_pitch_deg": 4.41
+   "swell_bob_cm": 6.75,
+   "swell_pitch_deg": 4.51
   },
   "120fps": {
-   "waterline_cm": 5.0,
-   "rest_pitch_deg": 0.0,
+   "waterline_cm": 5.01,
+   "rest_pitch_deg": 0.02,
    "rest_roll_deg": -0.0,
    "settle_s": 0.72,
    "drop_overshoot_cm": 3.59,
    "top_speed_cm_s": 745.4,
    "to_90pct_s": 3.78,
-   "squat_pitch_deg": -0.6,
-   "running_waterline_cm": 4.85,
-   "turn_yaw_rate_deg_s": -46.8,
-   "turn_radius_cm": 758.0,
-   "turn_speed_cm_s": 619.1,
-   "turn_heel_deg": 1.0,
+   "squat_pitch_deg": -0.67,
+   "running_waterline_cm": 4.83,
+   "turn_yaw_rate_deg_s": -59.2,
+   "turn_radius_cm": 567.0,
+   "turn_speed_cm_s": 586.0,
+   "turn_heel_deg": 1.04,
    "turns_right": true,
    "coast_to_50_s": 5.87,
    "reverse_speed_cm_s": 304.4,
    "righting_roll_after_2s_deg": 0.0,
-   "swell_bob_cm": 6.45,
-   "swell_pitch_deg": 4.41
+   "swell_bob_cm": 6.76,
+   "swell_pitch_deg": 4.52
   }
  }
 }
